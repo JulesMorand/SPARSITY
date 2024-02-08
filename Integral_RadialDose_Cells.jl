@@ -171,6 +171,12 @@ function integrate_weighted_radial_track( rMin::Float64, rMax::Float64, b::Float
     end
 
 #####################################
+struct Cell
+    x::Float64
+    y::Float64
+    r::Float64
+end
+
 
 function distribute_dose(cell::Cell, track::Track)
     x_track, y_track = track.x,track.y
@@ -205,9 +211,9 @@ function distribute_dose(cell::Cell, track::Track)
 
         if rMax == track.Rk
             if track.Rk > cell.r - b
-                theta1 = acos((b^2 + track.Rk^2 - cell.r^2) / (2 * b * track.Rk))
-                theta2 = acos((b^2 - track.Rk^2 + cell.r^2) / (2 * b * cell.r))
-                area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
+               theta1 = acos((b/(2*rMax) + rMax/(2*b) - (cell.r^2) / (2 * b * rMax)))
+               theta2 = acos((b/(2*cell.r) - (rMax*rMax)/(2*b*cell.r) + (cell.r) / (2 * b)))
+               area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
             else
                 area3 = π * (cell.r^2 - r_intersection^2)
             end
@@ -215,6 +221,8 @@ function distribute_dose(cell::Cell, track::Track)
 
         #dose /= area1 + area2 + area3
         Gyr=dose/(area1+area2+ area3)
+       # println("area1: ",area1," area2: ",area2," area3: ",area3,"\n1 sumareas:",area1+area2+area3," aera cell:",cell.r*cell.r*π, "\n",area1+area2+area3-cell.r*cell.r*π)
+
         #nucleus.totalNucleusDose += dose
        # push!(nucleus.doses, dose)
         #push!(nucleus.times, track.getTime())
@@ -226,8 +234,8 @@ function distribute_dose(cell::Cell, track::Track)
         dose = integral
         area2=area
         if rMax == track.Rk
-            theta1 = acos((b^2 + track.Rk^2 - cell.r^2) / (2 * b * track.Rk))
-            theta2 = acos((b^2 - track.Rk^2 + cell.r^2) / (2 * b * cell.r))
+            theta1 = acos((b/(2*rMax) + rMax/(2*b) - (cell.r^2) / (2 * b * rMax)))
+            theta2 = acos((b/(2*cell.r) - (rMax*rMax)/(2*b*cell.r) + (cell.r) / (2 * b)))
             area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
         end
 
@@ -242,8 +250,10 @@ function distribute_dose(cell::Cell, track::Track)
 end
 
 
+
+
 ############Test function###
-begin 
+@time begin
     Np=rand(Poisson(Npar))
     cell=Cell(0.,0., R)
     local DOSE_tot = 0. ;
