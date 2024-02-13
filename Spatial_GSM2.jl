@@ -1,20 +1,14 @@
 using Base.Threads
 using Distributed
 using CSV, DataFrames
-using DifferentialEquations
-using OrdinaryDiffEq
-using OptimizationOptimJL
-using OptimizationBBO
-using ForwardDiff
+#using DifferentialEquations
+#using OrdinaryDiffEq
+#using OptimizationOptimJL
+#using OptimizationBBO
+#using ForwardDiff
 using Distributions
 using Random
-using RecursiveArrayTools
 using Plots
-using CurveFit
-using Hexagons
-using Flux: batch
-using HDF5, JLD2, FileIO
-using ForwardDiff
 using Distances
 
 ###########
@@ -172,6 +166,12 @@ struct Cell
     x::Float64
     y::Float64
     r::Float64
+end
+
+struct Track
+    x::Float64
+    y::Float64
+    Rk::Float64
 end
 
 
@@ -333,17 +333,7 @@ end
 end
 
 #####################################
-struct Cell
-    x::Float64
-    y::Float64
-    r::Float64
-end
 
-struct Track
-    x::Float64
-    y::Float64
-    Rk::Float64
-end
 
 @everywhere function distribute_dose_vector(cell::Cell, track::Track)
     x_track, y_track = track.x,track.y
@@ -516,9 +506,9 @@ end
         radius_yP = rand(Categorical((integral/sum(integral))), y0d)
         radius_y = (radius[radius_yP .+ 1] - radius[radius_yP]).*rand(Uniform(0,1),y0d) .+ radius[radius_yP];
         if (x >= 0) 
-            theta_y = 3*π/2 .- acos.(y/b) .+ theta[radius_xP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
+            theta_y = 3*π/2 .- acos.(y/b) .+ theta[radius_yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
         elseif (x < 0) 
-            theta_y = 3*π/2 .+ acos.(y/b) .+ theta[radius_xP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
+            theta_y = 3*π/2 .+ acos.(y/b) .+ theta[radius_yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
         end
         Yx = radius_y.*cos.(theta_y) .+ x;
         Yy = radius_y.*sin.(theta_y) .+ y;
@@ -628,8 +618,8 @@ end
         DOSE_tot+=dose
         GYR_tot+=Gyr
     end
-println(DOSE_tot)
-println(GYR_tot)
+    println(DOSE_tot)
+    println(GYR_tot)
 end
 
 
@@ -694,8 +684,8 @@ T = Dose/(zF*D)*3600;
         #DOSE_tot+=dose
         GYR_tot+=Gyr
     end
-println(DOSE_tot)
-println(GYR_tot)
+    println(DOSE_tot)
+    println(GYR_tot)
 end
 
 dist =sqrt.(X[:,1].*X[:,1] .+ X[:,2].*X[:,2])
@@ -720,7 +710,7 @@ Plot(
 #return 0 if dead, 1 if Survivial_real
 
 a = 0.01; b = 0.01; r = 4;
-rd=1;
+rd = 1;
 
 @everywhere function spatial_GSM2(X,Y,a,b,r,rd)
     while size(X)[1] != 0
@@ -790,5 +780,78 @@ end
 @time begin
     surv = spatial_GSM2(X,Y,a,b,r,rd)
 end
+
+
+X_old = X;
+Y_old = Y;
+
+surv = Array{Float64}(undef, 0);
+for s in 1:10^4 
+    println(s)
+    X = X_old;
+    Y = Y_old;
+    push!(surv,spatial_GSM2(X,Y,a,b,r,rd))
+end
+
+surv_prob = size(surv[surv.>0])[1]/10^4
+
+@time begin
+    Np=rand(Poisson(Npar))
+    cell=Cell(0.,0., R)
+    local DOSE_tot = 0. ;
+    local GYR_tot  = 0. ;
+    println(Np)
+    X = Array{Float64}(undef, 0, Nd);
+    Y = Array{Float64}(undef, 0, Nd);
+    for i in 1:Np
+        #println(i)
+        x,y= GenerateHit(R,Rk)
+        track=Track(x,y,Rk)
+        integral, theta, Gyr, radius = distribute_dose_vector(cell,track);
+        integral[integral .< 0] .= 0;
+        Nd = 3;
+        ion = "4He";
+        theta_ = [theta[1:end-1]./2 theta[2:end]./2]
+        theta = minimum(theta_, dims = 2)
+        X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
+
+        dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
+        if size(dist[dist .> 8],1) != 0
+            return x,y 
+        end
+
+        X = vcat(X,X_)
+        Y = vcat(Y,Y_)
+        #DOSE_tot+=dose
+        GYR_tot+=Gyr
+    end
+    println(DOSE_tot)
+    println(GYR_tot)
+end
+
+
+@everywhere function spatial_GSM2_fast(X,Y,a,b,r,rd)
+    
+    dist = pairwise(Euclidean(), transpose(X));
+    dist[dist .> rd] .= 0;
+    p = 1;
+    if size(Y)[1] > 0
+        return 0
+    else
+        for i in 1:size(X)[1]
+            p *= r/(r+a+b*sum(dist[i,:]))
+        end
+    end
+
+    return p
+end
+
+X = X_old;
+Y = Y_old;
+
+@time begin
+    survP = spatial_GSM2_fast(X,Y,a,b,r,rd)
+end
+
 
 
