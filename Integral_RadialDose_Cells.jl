@@ -171,11 +171,7 @@ function integrate_weighted_radial_track( rMin::Float64, rMax::Float64, b::Float
     end
 
 #####################################
-struct Cell
-    x::Float64
-    y::Float64
-    r::Float64
-end
+
 
 
 function distribute_dose(cell::Cell, track::Track)

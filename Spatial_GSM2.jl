@@ -278,9 +278,9 @@ end
 @everywhere function integrate_weighted_radial_track_vector( rMin::Float64, rMax::Float64, b::Float64, r_nucleus::Float64, nSteps::Int64)
     r1, r2, log_r2, log_rMin, log_rMax, log_step = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     f1, f2, f, arc_weight1, arc_weight2 = 0.0, 0.0, 0.0, 0.0, 0.0
-    integral = Array{Float64}(undef,0)
-    theta = Array{Float64}(undef,0)
-    radius = Array{Float64}(undef,0)
+    local integral = Array{Float64}(undef,0)
+    local theta = Array{Float64}(undef,0)
+    local radius = Array{Float64}(undef,0)
     if rMin > 0
         log_rMin = log10(rMin)
     else
@@ -530,7 +530,7 @@ Y = Array{Float64}(undef, 0, Nd);
 
 # check the code for a single track
 begin
-    x,y= GenerateHit(R,Rk)
+x,y= GenerateHit(R,Rk)
 x = 7.098
 y = -7.662
 track=Track(x,y,Rk)
@@ -566,7 +566,7 @@ if x0d > 0
     Xx = radius_x.*cos.(theta_x) .+ x;
     Xy = radius_x.*sin.(theta_x) .+ y;
     for i in 1:x0d
-        X = vcat(X,reshape([Xx[i], Xy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
+       global X = vcat(X,reshape([Xx[i], Xy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
     end
 end
 if y0d > 0
@@ -584,7 +584,7 @@ if y0d > 0
     Yx = radius_y.*cos.(theta_y) .+ x;
     Yy = radius_y.*sin.(theta_y) .+ y;
     for i in 1:x0d
-        Y = vcat(Y,reshape([Yx[i], Yy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
+        global Y = vcat(Y,reshape([Yx[i], Yy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
     end
 end
 
@@ -610,16 +610,16 @@ end
     cell=Cell(0.,0., R)
     local DOSE_tot = 0. ;
     local GYR_tot  = 0. ;
-    println(Np)
+    #println(Np)
     for i in 1:Np
-        x,y= GenerateHit(R,Rk);
-        track=Track(x,y,Rk);
-        dose, area, Gyr = distribute_dose(cell,track);
+        local x,y= GenerateHit(R,Rk);
+        local track=Track(x,y,Rk);
+        local dose, area, Gyr = distribute_dose(cell,track);
         DOSE_tot+=dose
         GYR_tot+=Gyr
     end
-    println(DOSE_tot)
-    println(GYR_tot)
+    #println(DOSE_tot)
+    #println(GYR_tot)
 end
 
 
@@ -660,19 +660,19 @@ T = Dose/(zF*D)*3600;
     local DOSE_tot = 0. ;
     local GYR_tot  = 0. ;
     println(Np)
-    X = Array{Float64}(undef, 0, Nd);
-    Y = Array{Float64}(undef, 0, Nd);
+    local X = Array{Float64}(undef, 0, Nd);
+    local Y = Array{Float64}(undef, 0, Nd);
     for i in 1:Np
         #println(i)
-        x,y= GenerateHit(R,Rk)
-        track=Track(x,y,Rk)
-        integral, theta, Gyr, radius = distribute_dose_vector(cell,track);
+        local x,y= GenerateHit(R,Rk)
+        local track=Track(x,y,Rk)
+        local integral, theta, Gyr, radius = distribute_dose_vector(cell,track);
         integral[integral .< 0] .= 0;
-        Nd = 3;
-        ion = "4He";
-        theta_ = [theta[1:end-1]./2 theta[2:end]./2]
+        local Nd = 3;
+        local ion = "4He";
+        local theta_ = [theta[1:end-1]./2 theta[2:end]./2]
         theta = minimum(theta_, dims = 2)
-        X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
+        local X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
 
         dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
         if size(dist[dist .> 8],1) != 0
@@ -684,7 +684,7 @@ T = Dose/(zF*D)*3600;
         #DOSE_tot+=dose
         GYR_tot+=Gyr
     end
-    println(DOSE_tot)
+    #println(DOSE_tot)
     println(GYR_tot)
 end
 
@@ -697,17 +697,38 @@ err = findall(x -> x >= 8, dist)
 X[err,:]
 
 #plot the spatial distribution of damages
-using PlotlyJS
-df = DataFrame(X,:auto)
-Plot(
-    df,
-    x=:x1, y=:x2, z=:x3,
-    type="scatter3d", mode="markers"
+function CylinderShape(x,y,r,h)# (the cell)
+    r_cyl = r
+    h_cyl  = h
+    m_cyl , n_cyl  =100, 100
+    u  = range(0, 2pi, length=n_cyl )
+    v = range(0, h_cyl, length=m_cyl )
+    us = ones(m_cyl)*u'
+    vs = v*ones(n_cyl)'
+    #Surface parameterization
+    X  = r_cyl*cos.(us).+x
+    Y  = r_cyl*sin.(us).+y
+    Z  = vs
+    return X,Y,Z
+end
+using Plots
+plotlyjs()
+X_cyl,Y_cyl,Z_cyl=CylinderShape(3,-5,8.,6.) 
+plt1=Plots.surface(
+    X_cyl, Y_cyl, Z_cyl, 
+    size=(600,600),
+    opacity=0.3, 
+    cbar=:none, 
+    legend=false)
+Plots.scatter!(
+    df.x1,df.x2,df.x3,
+    mode="markers"
 )
 
-
-#Run the spatial model (I think it can be avoided but it not slow anyway)
-#return 0 if dead, 1 if Survivial_real
+plt1
+display(plt1)
+#Run the spatial model (I think it can be  savoided but it not slow anyway)
+#return 0 if dead, 1 if Survivial_reala
 
 a = 0.01; b = 0.01; r = 4;
 rd = 1;
@@ -738,18 +759,18 @@ rd = 1;
         append!(time_all,time);
 
         if argmin(tau) == 1
-            println("r")
+            #println("r")
 
             X = X[1:end .!= rand(DiscreteUniform(1,size(X)[1])), :];
         elseif argmin(tau) == 2
-            println("a")
+            #println("a")
 
             rem = rand(DiscreteUniform(1,size(X)[1]));
             Y = vcat(Y,reshape(X[rem,:], 1, :));
             X = X[1:end .!= rem, :];
 
         elseif argmin(tau) == 3
-            println("b")
+            #println("b")
 
             prob_matrix = bXM./sum(bXM);
             selected_index = rand(Categorical(vec(prob_matrix)), 1)[1];
@@ -767,7 +788,7 @@ rd = 1;
             return -1
         end
         if size(Y)[1] > 0
-            println("Dead")
+            #println("Dead")
             return 0
         end
     end
@@ -787,7 +808,7 @@ Y_old = Y;
 
 surv = Array{Float64}(undef, 0);
 for s in 1:10^4 
-    println(s)
+    #println(s)
     X = X_old;
     Y = Y_old;
     push!(surv,spatial_GSM2(X,Y,a,b,r,rd))
@@ -801,21 +822,21 @@ surv_prob = size(surv[surv.>0])[1]/10^4
     local DOSE_tot = 0. ;
     local GYR_tot  = 0. ;
     println(Np)
-    X = Array{Float64}(undef, 0, Nd);
-    Y = Array{Float64}(undef, 0, Nd);
+    local X = Array{Float64}(undef, 0, Nd);
+    local Y = Array{Float64}(undef, 0, Nd);
     for i in 1:Np
         #println(i)
-        x,y= GenerateHit(R,Rk)
-        track=Track(x,y,Rk)
-        integral, theta, Gyr, radius = distribute_dose_vector(cell,track);
+        local x,y= GenerateHit(R,Rk)
+        local track=Track(x,y,Rk)
+        local integral, theta, Gyr, radius = distribute_dose_vector(cell,track);
         integral[integral .< 0] .= 0;
-        Nd = 3;
-        ion = "4He";
-        theta_ = [theta[1:end-1]./2 theta[2:end]./2]
-        theta = minimum(theta_, dims = 2)
-        X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
+        local Nd = 3;
+        local ion = "4He";
+        local theta_ = [theta[1:end-1]./2 theta[2:end]./2]
+        local theta = minimum(theta_, dims = 2)
+        local X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
 
-        dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
+        local dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
         if size(dist[dist .> 8],1) != 0
             return x,y 
         end
