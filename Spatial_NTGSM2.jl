@@ -950,6 +950,9 @@ end
 
         X = vcat(X,X_)
         Y = vcat(Y,Y_)
+
+        N = vcat(N,N_)
+        M = vcat(M,M_)
         #DOSE_tot+=dose
         GYR_tot+=Gyr
     end
@@ -957,3 +960,148 @@ end
     println(GYR_tot)
 end
 
+a = 0.01; b = 0.01; r = 4;
+aM = 0.01; bM = 0.01; rM = 4;
+pa = 0.5; qa = 0.5
+
+@everywhere function spatial_NTGSM2(X,Y,N,M,a,b,r,aM,bM,rM,pa,qa,rd,rdN)
+    while maximum([size(X)[1],size(N)[1]]) != 0
+    
+        init_size = size(X)[1];
+
+        Tr = [0,0,0,0,0,0];
+        Rr = [rand(Uniform(0,1)), rand(Uniform(0,1)), rand(Uniform(0,1)), rand(Uniform(0,1)), rand(Uniform(0,1)), rand(Uniform(0,1))];
+        Sr = log.(1 ./ Rr);
+        time_all = Array{Float64}(undef, 0);
+        time = 0.0;
+
+        aX = a*size(X)[1];
+        dist = pairwise(Euclidean(), transpose(X));
+        dist[dist .> rd] .= 0;
+        bXM = b.*dist;
+        bX = sum(bXM)/2;
+        rX = r*size(X)[1];
+
+        aN = aM*size(N)[1];
+        distN = pairwise(Euclidean(), transpose(N));
+        distN[distN .> rdN] .= 0;
+        bXMN = bM.*distN;
+        bN = sum(bXMN)/2;
+        rN = rM*size(N)[1];
+
+        tau = (Sr .- Tr)./[rX, aX, bX, rN, aN, bN];
+        taus = minimum(tau);
+
+        Tr += taus.*[rX, aX, bX, rN, aN, bN];
+        time += taus;
+        append!(time_all,time);
+
+        if argmin(tau) == 1
+            println("r")
+
+            X = X[1:end .!= rand(DiscreteUniform(1,size(X)[1])), :];
+
+        elseif argmin(tau) == 2  
+            println("a")
+
+            psim = rand(Uniform(0,1));
+
+            if psim < pa
+                X = X[1:end .!= rand(DiscreteUniform(1,size(X)[1])), :];
+            else
+                rem = rand(DiscreteUniform(1,size(X)[1]));
+                N = vcat(N,reshape(X[rem,:], 1, :));
+                X = X[1:end .!= rem, :];
+            end
+
+        elseif argmin(tau) == 3 
+            println("b")
+
+            prob_matrix = bXM./sum(bXM);
+            selected_index = rand(Categorical(vec(prob_matrix)), 1)[1];
+            row = (selected_index ÷ size(bXM)[1]) + 1;
+            cols = ifelse(selected_index % size(bXM)[1] == 0, size(bXM)[1], selected_index % size(bXM)[1]);
+
+            psim = rand(Uniform(0,1));
+
+            if psim < qa
+                Y = vcat(Y,reshape((X[cols,:]+X[row,:])/2, 1, :));
+                X = X[setdiff(1:end, (cols, row)), :];
+            else
+                N = vcat(N,reshape((X[cols,:]+X[row,:])/2, 1, :));
+                X = X[setdiff(1:end, (cols, row)), :];
+            end
+
+        elseif argmin(tau) == 4 
+            println("rM")
+
+            N = N[1:end .!= rand(DiscreteUniform(1,size(N)[1])), :];
+
+        elseif argmin(tau) == 5 
+            println("aM")
+
+            rem = rand(DiscreteUniform(1,size(N)[1]));
+            M = vcat(M,reshape(N[rem,:], 1, :));
+            N = N[1:end .!= rem, :];
+
+        elseif argmin(tau) == 6 
+            println("bM")
+
+            prob_matrix = bXMN./sum(bXMN);
+            selected_index = rand(Categorical(vec(prob_matrix)), 1)[1];
+            row = (selected_index ÷ size(bXMN)[1]) + 1;
+            cols = ifelse(selected_index % size(bXMN)[1] == 0, size(bXMN)[1], selected_index % size(bXMN)[1]);
+
+            psim = rand(Uniform(0,1));
+
+            M = vcat(M,reshape((N[cols,:]+N[row,:])/2, 1, :));
+            N = N[setdiff(1:end, (cols, row)), :];
+        end
+        Sr .+= log.(1/rand(Uniform(0,1)));
+
+        #if init_size == size(X)[1]
+        #    println("Error")
+        #    break
+        #end
+
+        if (size(Y)[1] > 0)
+            println("Dead")
+            return 0
+            break
+        end
+    end
+
+    if (size(Y)[1] == 0) & (size(M)[1] > 0 )
+        return 1
+    elseif (size(Y)[1] == 0) & (size(M)[1] == 0 )
+        return 2
+    end
+end
+
+@everywhere function spatial_NTGSM2_fast(N,M,a,b,r,rd)
+    
+    dist = pairwise(Euclidean(), transpose(X));
+    dist[dist .> rd] .= 0;
+    p = 1;
+    if size(Y)[1] > 0
+        return 0
+    else
+        for i in 1:size(X)[1]
+            p *= r/(r+a+b*sum(dist[i,:]))
+        end
+    end
+
+    return p
+end
+
+@time begin
+    survP = spatial_GSM2_fast(X,Y,a,b,r,rd)
+end
+
+aM = 0.01; bM = 0.01; rM = 4; rdM = 0.5;
+
+@time begin
+    survM = spatial_GSM2_fast(N,M,aM,bM,rM,rdM)
+end
+
+mut_p = survP*(1-survM)
