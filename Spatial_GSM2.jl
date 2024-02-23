@@ -696,6 +696,7 @@ err = findall(x -> x >= 8, dist)
 # Define the outcomes and their corresponding probabilities
 X[err,:]
 
+df = DataFrame(X,:auto)
 #plot the spatial distribution of damages
 function CylinderShape(x,y,r,h)# (the cell)
     r_cyl = r
@@ -711,7 +712,7 @@ function CylinderShape(x,y,r,h)# (the cell)
     Z  = vs
     return X,Y,Z
 end
-using Plots
+using PlotlyJS,WebIO,Plots
 plotlyjs()
 X_cyl,Y_cyl,Z_cyl=CylinderShape(3,-5,8.,6.) 
 plt1=Plots.surface(

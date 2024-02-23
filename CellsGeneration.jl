@@ -34,11 +34,11 @@ let
         opacity=0.3, 
         cbar=:none, 
         legend=false)
-    N = 15 
+    N = 10
     # create an uninitialized 1D array of size N
     arrayOfCells = Array{Cell3D, 1}(undef, N) 
     for i in 1:N
-        arrayOfCells[i]=GenerateCells(7.5,8.5,30.)
+        arrayOfCells[i]=GenerateCells(4.5,5.5,30.)
     end
    
 
