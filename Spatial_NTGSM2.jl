@@ -624,7 +624,7 @@ if x0d > 0
     Xx = radius_x.*cos.(theta_x) .+ x;
     Xy = radius_x.*sin.(theta_x) .+ y;
     for i in 1:x0d
-        X = vcat(X,reshape([Xx[i], Xy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
+        global X = vcat(X,reshape([Xx[i], Xy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
     end
 end
 if y0d > 0
@@ -642,7 +642,7 @@ if y0d > 0
     Yx = radius_y.*cos.(theta_y) .+ x;
     Yy = radius_y.*sin.(theta_y) .+ y;
     for i in 1:x0d
-        Y = vcat(Y,reshape([Yx[i], Yy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
+        global Y = vcat(Y,reshape([Yx[i], Yy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
     end
 end
 
@@ -730,15 +730,15 @@ T = Dose/(zF*D)*3600;
         ion = "4He";
         theta_ = [theta[1:end-1]./2 theta[2:end]./2]
         theta = minimum(theta_, dims = 2)
-        X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
+        local X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
 
         dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
         if size(dist[dist .> 8],1) != 0
             return x,y 
         end
 
-        X = vcat(X,X_)
-        Y = vcat(Y,Y_)
+        global X = vcat(X,X_)
+        global Y = vcat(Y,Y_)
         #DOSE_tot+=dose
         GYR_tot+=Gyr
     end
@@ -875,15 +875,15 @@ surv_prob = size(surv[surv.>0])[1]/10^4
         ion = "4He";
         theta_ = [theta[1:end-1]./2 theta[2:end]./2]
         theta = minimum(theta_, dims = 2)
-        X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
+        local X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
 
         dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
         if size(dist[dist .> 8],1) != 0
             return x,y 
         end
 
-        X = vcat(X,X_)
-        Y = vcat(Y,Y_)
+        global X = vcat(X,X_)
+        global Y = vcat(Y,Y_)
         #DOSE_tot+=dose
         GYR_tot+=Gyr
     end
