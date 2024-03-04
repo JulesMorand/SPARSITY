@@ -1,31 +1,4 @@
-using Plots,WebIO,PlotlyJS,Distributions
-plotlyjs()
-function SphereShape(x,y,z,r)# (the cell)
-    N = 50
-    u = range(0, stop=2π, length=N)
-    v = range(0, stop=π, length=N)
-    X = r.*cos.(u) .* sin.(v)'.+x
-    Y = r.*sin.(u) .* sin.(v)'.+y
-    Z = repeat(r.*cos.(v)',outer=[N, 1]).+z
-   
-    return X,Y,Z
-end
-
-function CylinderShape(x,y,z,r,h)# (the nucleus)
-    r_cyl = r
-    h_cyl  = h
-    m_cyl , n_cyl  =50, 50
-    u  = range(0, 2pi, length=n_cyl )
-    v = range(z-h_cyl/2.,z+h_cyl/2., length=m_cyl )
-    us = ones(m_cyl).*transpose(u)
-    vs = v.*transpose(ones(n_cyl))
-    #Surface parameterization
-    X  = r_cyl*cos.(us).+x
-    Y  = r_cyl*sin.(us).+y
-    Z  = vs
-    return X,Y,Z
-end
-    
+using Distributions
 mutable struct Cell3D
     x::Float64
     y::Float64
@@ -33,12 +6,6 @@ mutable struct Cell3D
     r_nucl::Float64
     R_cell::Float64
 end
-
-####Dimension of the hit box
-X_box=500  #1000µmm side size of the square box
-r_nucl=10. #10µm
-R_cell=30. #
-
 function generate_cells_positions_squaredlattice(X_box::Int,R_cell::Float64)
     N_CellsSide=convert(Int64,floor(X_box/(2*R_cell)))
     nodes_positions = Vector{Tuple{Float64, Float64}}()
@@ -68,51 +35,13 @@ function generate_cells_positions_triangularlattice(X_box::Int,R_cell::Float64)
     local N=N_CellsSide*N_CellsSide2
     return N,nodes_positions
 end
-
-#############CHOOSE squared or triangluar Lattice####
-
-#N,nodes_positions=generate_cells_positions_squaredlattice(X_box,R_cell)
-N,nodes_positions=generate_cells_positions_triangularlattice(X_box,R_cell)
-
-#############Create Cells Array######
-arrayOfCells = Array{Cell3D, 1}(undef, N) 
-for i in 1:N
-    x,y=nodes_positions[i]
-    cell=Cell3D(x,y,R_cell,r_nucl,R_cell)
-    arrayOfCells[i]=cell
+#############Create Cells Array################
+function Creation_ArrayOfCell(N,nodes_positions)
+    arrayOfCells = Array{Cell3D, 1}(undef, N) 
+        for i in 1:N
+            x,y=nodes_positions[i]
+            cell=Cell3D(x,y,R_cell,r_nucl,R_cell)
+            arrayOfCells[i]=cell
+        end
+    return arrayOfCells
 end
-
-#######Plot the cell lattice############
-#Initialise the plot in ploting the first cell
-x,y,z,r,R=arrayOfCells[1].x,arrayOfCells[1].y,arrayOfCells[1].z,arrayOfCells[1].r_nucl,arrayOfCells[1].R_cell
-X,Y,Z=SphereShape(x,y,z,R)
-plt=Plots.surface(
-    X, Y, Z, 
-    size=(700,700),
-    opacity=0.4, 
-    color=cgrad(:matter, N, categorical = true)[1],
-    legend=false,
-    xlims=(0,X_box+R_cell),
-    ylims=(0,X_box+R_cell),
-    zlims=(0,X_box+R_cell))
-Xnc,Ync,Znc=CylinderShape(x,y,z,r,8.)
-    Plots.surface!(
-    Xnc,Ync,Znc, 
-    opacity=1, 
-    color=cgrad(:matter, N, categorical = true)[1], legend=false)
-
-for i in 2:length(arrayOfCells)
-    x,y,z,r,R=arrayOfCells[i].x,arrayOfCells[i].y,arrayOfCells[i].z,arrayOfCells[i].r_nucl,arrayOfCells[i].R_cell
-    X,Y,Z=SphereShape(x,y,z,R)
-    Plots.surface!(
-    X, Y, Z, 
-    opacity=0.4, 
-    color=cgrad(:matter, N, categorical = true)[i], legend=false)
-    Xnc,Ync,Znc=CylinderShape(x,y,z,r,8.)
-    Plots.surface!(
-    Xnc,Ync,Znc, 
-    opacity=1, 
-    color=cgrad(:matter, N, categorical = true)[i], legend=false)
-
-end
-display(plt)
