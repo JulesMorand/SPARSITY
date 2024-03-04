@@ -1,13 +1,13 @@
-####Parameters 
-###Dimension of the hit box
-X_box=500  #1000µmm side size of the square box
-###Size Cell nucleus
-r_nucl=10. #10µm
-###Size Cell
-R_cell=30. #
 using Base.Threads
-include("./CreationLatticeCells.jl") 
-include("./FunctionVisualisation.jl")
+include("./FunctionsCreationCells.jl") 
+include("./FunctionsVisualisation.jl")
+###Parameters 
+###Dimension of the hit box
+global X_box=500  #1000µmm side size of the square box
+###Size Cell nucleus
+global r_nucl=10. #10µm
+###Size Cell
+global R_cell=30. #30µm
 #############CHOOSE squared or triangluar Lattice####
 #N,nodes_positions=generate_cells_positions_squaredlattice(X_box,R_cell)
 N,nodes_positions=generate_cells_positions_triangularlattice(X_box,R_cell) 
