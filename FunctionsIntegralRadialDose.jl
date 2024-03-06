@@ -1,3 +1,5 @@
+###For the fucntion GetRadialLinearDose
+include("./FunctionsBeamsGeometry.jl")
 ##################### Define Structures for Cell and track
 struct Cell
     x::Float64
