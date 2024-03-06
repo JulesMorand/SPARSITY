@@ -1,6 +1,8 @@
 using Base.Threads
 include("./FunctionsCreationCells.jl") 
 include("./FunctionsVisualisation.jl")
+include("./FunctionsIntegralRadialDose.jl")
+include
 ###Parameters 
 ###Dimension of the hit box
 global X_box=500  #1000µmm side size of the square box
@@ -15,3 +17,4 @@ println(N)
 #############Create Cells Array######################
 arrayOfCell=Creation_ArrayOfCell(N,nodes_positions)
 Plot_Lattice_Cells(arrayOfCell)
+##########################################################

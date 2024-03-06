@@ -468,7 +468,7 @@ end
 #function to calculate the spatial position of the damages
 #for each track calculate the dose on the cell and ditribute the damages around the cell nucleus
 
-@everywhere function calculate_damage(ion, LET, integral, theta, Gyr)
+@everywhere function calculate_damage(ion, LET,cell, integral,radius, theta, Gyr)
     
     X = Array{Float64}(undef, 0, Nd);
     Y = Array{Float64}(undef, 0, Nd);
@@ -499,7 +499,7 @@ end
         Xx = radius_x.*cos.(theta_x) .+ x;
         Xy = radius_x.*sin.(theta_x) .+ y;
         for i in 1:x0d
-            X = vcat(X,reshape([Xx[i], Xy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
+            X = vcat(X,reshape([Xx[i], Xy[i], cell.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     end
     if y0d > 0
@@ -513,7 +513,7 @@ end
         Yx = radius_y.*cos.(theta_y) .+ x;
         Yy = radius_y.*sin.(theta_y) .+ y;
         for i in 1:x0d
-            Y = vcat(Y,reshape([Yx[i], Yy[i], R*rand(Uniform(0,1),1)[1]], 1, :));
+            Y = vcat(Y,reshape([Yx[i], Yy[i], cell.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     end
 
@@ -594,7 +594,7 @@ Nd = 3;
 ion = "4He";
 theta_ = [theta[1:end-1]./2 theta[2:end]./2]
 theta = minimum(theta_, dims = 2)
-X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr)
+X_, Y_ = calculate_damage(ion, LET,cell, integral,radius, theta, Gyr)
 
 X = vcat(X,X_)
 end
@@ -672,7 +672,7 @@ T = Dose/(zF*D)*3600;
         local ion = "4He";
         local theta_ = [theta[1:end-1]./2 theta[2:end]./2]
         theta = minimum(theta_, dims = 2)
-        local X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
+        local X_, Y_ = calculate_damage(ion, LET,cell, integral,radius, theta, Gyr);
 
         dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
         if size(dist[dist .> 8],1) != 0
@@ -836,7 +836,7 @@ surv_prob = size(surv[surv.>0])[1]/10^4
         local ion = "4He";
         local theta_ = [theta[1:end-1]./2 theta[2:end]./2]
         local theta = minimum(theta_, dims = 2)
-        local X_, Y_ = calculate_damage(ion, LET, integral, theta, Gyr);
+        local X_, Y_ = calculate_damage(ion, LET,cell, integral,radius, theta, Gyr);
 
         local dist =sqrt.(X_[:,1].*X_[:,1] .+ X_[:,2].*X_[:,2])
         if size(dist[dist .> 8],1) != 0
