@@ -7,7 +7,7 @@ R_cell=30. #
 using Plots,WebIO,PlotlyJS,Distributions
 plotlyjs()
 function SphereShape(x,y,z,r)# (the cell)
-    N = 50
+    N = 25#####resolution 
     u = range(0, stop=2π, length=N)
     v = range(0, stop=π, length=N)
     X = r.*cos.(u) .* sin.(v)'.+x
@@ -20,7 +20,7 @@ end
 function CylinderShape(x,y,z,r,h)# (the nucleus)
     r_cyl = r
     h_cyl  = h
-    m_cyl , n_cyl  =50, 50
+    m_cyl , n_cyl  =25, 25###resolution
     u  = range(0, 2pi, length=n_cyl )
     v = range(z-h_cyl/2.,z+h_cyl/2., length=m_cyl )
     us = ones(m_cyl).*transpose(u)
