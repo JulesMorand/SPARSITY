@@ -141,6 +141,9 @@ end
 
 end
 
+
+#############This works fine
+
 global Np = rand(Poisson(Npar))
 global cell = Cell(0.,0., R)
 global DOSE_tot = 0. ;
@@ -181,16 +184,18 @@ end
 
 
 
+#from here, if I run the code alone it works, if I run the function it doesn't!
+
 cell = Cell(0.,0., R)
 gsm2 = GSM2(4.,0.1,0.1,0.8)
 
-function simulate_GSM2(ion::Ion, cell::Cell, gsm2::GSM2, Npar::Int64, Nd::Int64, Rk::Float64)
+Np = rand(Poisson(Npar))
+GYR_tot  = 0. ;
 
-    Np = rand(Poisson(Npar))
-    GYR_tot  = 0. ;
+X = Array{Float64}(undef, 0, Nd);
+Y = Array{Float64}(undef, 0, Nd);
 
-    X = Array{Float64}(undef, 0, Nd);
-    Y = Array{Float64}(undef, 0, Nd);
+function simulate_GSM2(ion::Ion, cell::Cell, gsm2::GSM2, Np::Int64, Nd::Int64, Rk::Float64, GYR_tot::Float64, X::Matrix{Float64}, Y::Matrix{Float64})
 
     for i in 1:Np
         #println("ii = $ii on thread $(Threads.threadid())")
@@ -219,13 +224,21 @@ function simulate_GSM2(ion::Ion, cell::Cell, gsm2::GSM2, Npar::Int64, Nd::Int64,
 
 end
 
+Np = rand(Poisson(Npar))
+GYR_tot  = 0. ;
+
+X = Array{Float64}(undef, 0, Nd);
+Y = Array{Float64}(undef, 0, Nd);
+
+simulate_GSM2(ion, cell, gsm2, Npar, Np, Rk, GYR_tot, X, Y)
+
 @time begin
-    survP = simulate_GSM2(ion, cell, gsm2, Npar, Nd, Rk)
+    survP = simulate_GSM2(ion, cell, gsm2, Npar, Np, Rk, GYR_tot, X, Y)
 end
 
 
 sim = 10^3;
 global survP = Array{Float64};
 Threads.@threads for i in 1:sim
-    survP[i] = simulate_GSM2(ion, cell, gsm2, Npar, Nd, Rk)
+    survP[i] = simulate_GSM2(ion, cell, gsm2, Npar, Np, Rk)
 end
