@@ -1,4 +1,3 @@
-
 @everywhere function ATRadius(ion::Ion, irrad::Irrad)
 
     Rc = 0.01;
@@ -41,7 +40,7 @@ end
 
 ####Original functions
 
-function arc_intersection_angle(r::Float64, b::Float64, r_nucleus::Float64)
+@everywhere function arc_intersection_angle(r::Float64, b::Float64, r_nucleus::Float64)
     if b < r_nucleus
         if r <= r_nucleus - b
             return 2 * π
@@ -64,7 +63,7 @@ function arc_intersection_angle(r::Float64, b::Float64, r_nucleus::Float64)
     return 0.0
 end
 ##############
-function integrate_weighted_radial_track( rMin::Float64, rMax::Float64, b::Float64, r_nucleus::Float64, step::Int64)
+@everywhere function integrate_weighted_radial_track( rMin::Float64, rMax::Float64, b::Float64, r_nucleus::Float64, step::Int64)
     r1, r2, log_r2, log_rMin, log_rMax, log_step = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     f1, f2, f, arc_weight1, arc_weight2 = 0.0, 0.0, 0.0, 0.0, 0.0
     integral = 0.0
@@ -112,7 +111,7 @@ function integrate_weighted_radial_track( rMin::Float64, rMax::Float64, b::Float
     return area, integral, integral/area
 end
 
-function distribute_dose(cell::Cell, track::Track)
+@everywhere function distribute_dose(cell::Cell, track::Track)
     x_track, y_track = track.x,track.y
     x_track = (x_track - cell.x) #* 1e3  # mm -> um ??
     y_track = (y_track - cell.y) #* 1e3  # mm -> um
@@ -212,7 +211,7 @@ end
 end
 ##############
 
-function integrate_weighted_radial_track_vector(ion::Ion, rMin::Float64, rMax::Float64, b::Float64, r_nucleus::Float64, nSteps::Int64)
+@everywhere function integrate_weighted_radial_track_vector(ion::Ion, rMin::Float64, rMax::Float64, b::Float64, r_nucleus::Float64, nSteps::Int64)
     r1, r2, log_r2, log_rMin, log_rMax, log_step = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     f1, f2, f, arc_weight1, arc_weight2 = 0.0, 0.0, 0.0, 0.0, 0.0
     integral = Array{Float64}(undef,0)
@@ -406,56 +405,58 @@ end
 #for each track calculate the dose on the cell and ditribute the damages around the cell nucleus
 
 #@everywhere function calculate_damage(ion::Ion, integral::Vector{Float64}, theta::Matrix{Float64}, Gyr::Float64)
-@everywhere function calculate_damage(ion::Ion, cell::Cell, integral, theta, Gyr, radius)
-   
-    X = Array{Float64}(undef, 0, Nd);
-    Y = Array{Float64}(undef, 0, Nd);
 
-    #theta_ = [theta[1:end-1]./2 theta[2:end]./2]
-    #theta = minimum(theta_, dims = 2)
+@everywhere function calculate_damage(ion_::Ion, cell_::Cell, integral_, theta_, Gyr_, radius_)
 
+    X_CD = Array{Float64}(undef, 0, Nd);
+    Y_CD = Array{Float64}(undef, 0, Nd);
+    
+    #theta__ = [theta_[1:end-1]./2 theta_[2:end]./2]
+    #theta_ = minimum(theta__, dims = 2)
+    
     b = sqrt(x*x + y*y)
     
-    kappa_DSB = 9*calculate_kappa(ion);
+    kappa_DSB = 9*calculate_kappa(ion_);
     lambda_DSB = kappa_DSB*10^-3;
-
-    x0d = rand(Poisson(kappa_DSB*Gyr))
-    y0d = rand(Poisson(lambda_DSB*Gyr))
-
+    
+    x0d = rand(Poisson(kappa_DSB*Gyr_))
+    y0d = rand(Poisson(lambda_DSB*Gyr_))
+    
     if (x0d == 0) & (y0d == 0)
         return X, Y
     end
-
+    
     if x0d > 0
-        radius_xP = rand(Categorical((integral/sum(integral))), x0d)
-        radius_x = (radius[radius_xP .+ 1] - radius[radius_xP]).*rand(Uniform(0,1),x0d) .+ radius[radius_xP];
+        radius__xP = rand(Categorical((integral_/sum(integral_))), x0d)
+        radius__x = (radius_[radius__xP .+ 1] - radius_[radius__xP]).*rand(Uniform(0,1),x0d) .+ radius_[radius__xP];
         if (x >= 0)
-            theta_x = 3*π/2 .- acos.(y/b) .+ theta[radius_xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+            theta__x = 3*π/2 .- acos.(y/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
         elseif (x < 0)
-            theta_x = 3*π/2 .+ acos.(y/b) .+ theta[radius_xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+            theta__x = 3*π/2 .+ acos.(y/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
         end
-        Xx = radius_x.*cos.(theta_x) .+ x;
-        Xy = radius_x.*sin.(theta_x) .+ y;
+        Xx = radius__x.*cos.(theta__x) .+ x;
+        Xy = radius__x.*sin.(theta__x) .+ y;
         for i in 1:x0d
-            X = vcat(X,reshape([Xx[i], Xy[i], cell.r*rand(Uniform(0,1),1)[1]], 1, :));
+            X_CD = vcat(X,reshape([Xx[i], Xy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     end
+    
     if y0d > 0
-        radius_yP = rand(Categorical((integral/sum(integral))), y0d)
-        radius_y = (radius[radius_yP .+ 1] - radius[radius_yP]).*rand(Uniform(0,1),y0d) .+ radius[radius_yP];
+        radius__yP = rand(Categorical((integral_/sum(integral_))), y0d)
+        radius__y = (radius_[radius__yP .+ 1] - radius_[radius__yP]).*rand(Uniform(0,1),y0d) .+ radius_[radius__yP];
         if (x >= 0) 
-            theta_y = 3*π/2 .- acos.(y/b) .+ theta[radius_yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
+            theta__y = 3*π/2 .- acos.(y/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
         elseif (x < 0) 
-            theta_y = 3*π/2 .+ acos.(y/b) .+ theta[radius_yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
+            theta__y = 3*π/2 .+ acos.(y/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
         end
-        Yx = radius_y.*cos.(theta_y) .+ x;
-        Yy = radius_y.*sin.(theta_y) .+ y;
+        Yx = radius__y.*cos.(theta__y) .+ x;
+        Yy = radius__y.*sin.(theta__y) .+ y;
         for i in 1:x0d
-            Y = vcat(Y,reshape([Yx[i], Yy[i], cell.r*rand(Uniform(0,1),1)[1]], 1, :));
+            Y_CD = vcat(Y,reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     end
-
-    return X, Y
+    
+    return X_CD, Y_CD
 end
 
 #@everywhere function calculate_damage_NT(ion::Ion, integral::Float64, theta::Float64, Gyr::Float64, NT::Bool)
@@ -744,4 +745,33 @@ end
     end
 
     return p*(1-pM)
+end
+
+@everywhere function simulate_GSM2(ion_::Ion, cell_::Cell, gsm2_::GSM2, Np_::Int64, Rk_::Float64, GY_R_tot_::Float64, X_::Matrix{Float64}, Y_::Matrix{Float64})
+
+	for i in 1:Np_
+		#println("ii = $ii on thread $(Threads.threadid())")
+		global x, y = GenerateHit(cell_, Rk_)
+		global track = Track(x, y, Rk_)
+		global integral, theta, Gyr, radius = distribute_dose_vector(ion_, cell_, track)
+
+		global X_i, Y_i = calculate_damage(ion_, cell_, integral, theta, Gyr, radius)
+
+		dist = sqrt.(X_i[:, 1] .* X_i[:, 1] .+ X_i[:, 2] .* X_i[:, 2])
+		if size(dist[dist.>cell_.r], 1) != 0
+			println("Error")
+			#return X_i
+		end
+
+		X_ = vcat(X_, X_i)
+		Y_ = vcat(Y_, Y_i)
+		#DOSE_tot+=dose
+		GY_R_tot_ += Gyr
+	end
+	#println("Total imparted dose = $GY_R_tot_")
+
+	global survP = spatial_GSM2_fast(X_, Y_, gsm2_)
+
+	return survP
+
 end
