@@ -78,7 +78,7 @@ N,nodes_positions=generate_cells_positions_triangularlattice(X_box,R_cell)
 println(N)
 #############Create Cells Array######################
 arrayOfCell=Creation_ArrayOfCell(N,nodes_positions,r_nucl,R_cell);
-Plot_Lattice_Cells(arrayOfCell)
+#Plot_Lattice_Cells(arrayOfCell)
 ##########################################################
 
 global ion = Ion("4He", 56.0, 1, 4.5, 1.0)
@@ -104,14 +104,16 @@ global zF = irrad.dose / Npar
 global D = DoseRate_h / zF
 global T = irrad.dose / (zF * D) * 3600
 # ############Test function###
+#Nd is the dimension fo the space, the nucleus of the cell is assumed to be a cylinder. Thde cell a sphere around the centerThe geometry can be more complicated but for now it is fine
+Nd = 3;
 @time begin
     #Np=rand(Poisson(Npar))
     Np=10;
     #local DOSE_tot = 0. ;
     local GYR_tot  = 0. ;
     println(Np)
-    X = Array{Float64}(undef, 0, Nd);
-    Y = Array{Float64}(undef, 0, Nd);
+    global X = Array{Float64}(undef, 0, Nd);
+    global Y = Array{Float64}(undef, 0, Nd);
     for i in 1:Np
         x,y= GenerateHit(targetCell,Rk);
         track=Track(x,y,Rk);
@@ -119,7 +121,7 @@ global T = irrad.dose / (zF * D) * 3600
             cell=arrayOfCell[j];
             println(cell)
             integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
-            X_, Y_ = calculate_damage(ion, LET ,cell, integral, theta, Gyr, radius);
+            X_, Y_ = calculate_damage(ion ,cell, integral, theta, Gyr, radius);
             X = vcat(X,X_)
             Y = vcat(Y,Y_)
             #DOSE_tot+=dose

@@ -211,9 +211,9 @@ end
 @everywhere function integrate_weighted_radial_track_vector(ion::Ion, rMin::Float64, rMax::Float64, b::Float64, r_nucleus::Float64, nSteps::Int64)
     r1, r2, log_r2, log_rMin, log_rMax, log_step = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     f1, f2, f, arc_weight1, arc_weight2 = 0.0, 0.0, 0.0, 0.0, 0.0
-    integral = Array{Float64}(undef,0)
-    theta = Array{Float64}(undef,0)
-    radius = Array{Float64}(undef,0)
+    local integral = Array{Float64}(undef,0)
+    local theta = Array{Float64}(undef,0)
+    local radius = Array{Float64}(undef,0)
     if rMin > 0
         log_rMin = log10(rMin)
     else
@@ -268,14 +268,17 @@ end
 #####################################
 
 @everywhere function distribute_dose_vector(ion::Ion, cell::Cell, track::Track)
-    x_track, y_track = track.x,track.y
-    x_track = (x_track - cell.x) #* 1e3  # mm -> um ??
-    y_track = (y_track - cell.y) #* 1e3  # mm -> um
-    b = sqrt(x_track^2 + y_track^2)
-
-    rMax = min(Rk, b + cell.r)
-
-    area1 = area2 = area3 = 0.0
+    local integral = Array{Float64}(undef,0)
+    local theta = Array{Float64}(undef,0)
+    local radius = Array{Float64}(undef,0)
+    local dose=0.
+    local Gyr=0.
+    local x_track, y_track = track.x,track.y
+    local x_track = (x_track - cell.x) #* 1e3  # mm -> um ??
+    local y_track = (y_track - cell.y) #* 1e3  # mm -> um
+    local b = sqrt(x_track^2 + y_track^2)
+    local rMax = min(Rk, b + cell.r)
+    local area1 = area2 = area3 = 0.0
 
     if b <= cell.r
         #nucleus.inNucleusCount += 1
@@ -316,7 +319,7 @@ end
         end
 
         #dose /= area1 + area2 + area3
-        Gyr=dose/(area1+area2+ area3)
+       Gyr = dose/(area1+area2+ area3);
        # println("area1: ",area1," area2: ",area2," area3: ",area3,"\n1 sumareas:",area1+area2+area3," aera cell:",cell.r*cell.r*π, "\n",area1+area2+area3-cell.r*cell.r*π)
 
         #nucleus.totalNucleusDose += dose
@@ -335,7 +338,7 @@ end
             area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
         end
 
-        Gyr = dose/(area2 + area3)
+        Gyr = dose/(area2 + area3);
 
         #nucleus.totalNucleusDose += dose
         #return dose, area1+area2+area3, Gyr
@@ -343,8 +346,8 @@ end
         #push!(nucleus.times, track.getTime())
     end
 
-    integral[integral .< 0] .= 0
-    theta = minimum([theta[1:end-1]./2 theta[2:end]./2], dims = 2)
+   integral[integral .< 0] .= 0
+   theta = minimum([theta[1:end-1]./2 theta[2:end]./2], dims = 2)
 
     return integral, theta, Gyr, radius
 end
