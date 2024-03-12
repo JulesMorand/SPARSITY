@@ -1,6 +1,3 @@
-
-using Plots,WebIO,PlotlyJS,Distributions
-plotlyjs()
 function SphereShape(x,y,z,r)# (the cell)
     N = 50
     u = range(0, stop=2π, length=N)
@@ -27,8 +24,9 @@ function CylinderShape(x,y,z,r,h)# (the nucleus)
 end
 #############Plot the cell fro the arrayOfCells ############
 function Plot_Lattice_Cells(arrayOfCells)
+    plotlyjs()
     #Initialise the plot in ploting the first cell
-    local x,y,z,r,R=arrayOfCells[1].x,arrayOfCells[1].y,arrayOfCells[1].z,arrayOfCells[1].r_nucl,arrayOfCells[1].R_cell
+    local x,y,z,r,R=arrayOfCells[1].x,arrayOfCells[1].y,arrayOfCells[1].z,arrayOfCells[1].r,arrayOfCells[1].R
     local X,Y,Z=SphereShape(x,y,z,R)
     plt=Plots.surface(
     X, Y, Z, 
@@ -36,17 +34,17 @@ function Plot_Lattice_Cells(arrayOfCells)
     opacity=0.4, 
     color=cgrad(:matter, N, categorical = true)[1],
     legend=false,
-    xlims=(0,X_box+R_cell),
-    ylims=(0,X_box+R_cell),
-    zlims=(0,X_box+R_cell))
-    local Xnc,Ync,Znc=CylinderShape(x,y,z,r,8.)
+    xlims=(0,X_box+R),
+    ylims=(0,X_box+R),
+    zlims=(0,X_box+R))
+    local Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
     Plots.surface!(
     Xnc,Ync,Znc, 
     opacity=1, 
     color=cgrad(:matter, N, categorical = true)[1], legend=false)
 
     for i in 2:length(arrayOfCells)
-        local x,y,z,r,R=arrayOfCells[i].x,arrayOfCells[i].y,arrayOfCells[i].z,arrayOfCells[i].r_nucl,arrayOfCells[i].R_cell
+        local x,y,z,r,R=arrayOfCells[i].x,arrayOfCells[i].y,arrayOfCells[i].z,arrayOfCells[i].r,arrayOfCells[i].R
         X,Y,Z=SphereShape(x,y,z,R)
         Plots.surface!(
         X, Y, Z, 
