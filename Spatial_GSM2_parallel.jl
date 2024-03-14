@@ -132,11 +132,11 @@ global sim = 10;
 @time begin
 	Threads.@threads for i_ in 1:sim
 		println("ii = $i_ on thread $(Threads.threadid())")
-		@everywhere Np = rand(Poisson(Npar))
-		@everywhere GYR_tot = 0.0;
+		global Np = rand(Poisson(Npar))
+		global GYR_tot = 0.0;
 
-		@everywhere X = Array{Float64}(undef, 0, Nd);
-		@everywhere Y = Array{Float64}(undef, 0, Nd);
+		global X = Array{Float64}(undef, 0, Nd);
+		global Y = Array{Float64}(undef, 0, Nd);
 
 		@everywhere survPi_ = simulate_GSM2(ion, cell, gsm2, Np, Rk, GYR_tot, X, Y);
 
