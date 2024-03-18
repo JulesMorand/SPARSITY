@@ -272,8 +272,8 @@ end
 
 @everywhere function distribute_dose_vector(ion::Ion, cell::Cell, track::Track)
     global x_track, y_track = track.x,track.y
-    x_track = (x_track - cell.x) #* 1e3  # mm -> um ??
-    y_track = (y_track - cell.y) #* 1e3  # mm -> um
+    global x_track = (x_track - cell.x) #* 1e3  # mm -> um ??
+    global y_track = (y_track - cell.y) #* 1e3  # mm -> um
     global b = sqrt(x_track^2 + y_track^2)
 
     global rMax = min(Rk, b + cell.r)
@@ -319,7 +319,7 @@ end
         end
 
         #dose /= area1 + area2 + area3
-        global Gyr=dose/(area1+area2+ area3)
+        global Gyr = dose/(area1+area2+ area3)
        # println("area1: ",area1," area2: ",area2," area3: ",area3,"\n1 sumareas:",area1+area2+area3," aera cell:",cell.r*cell.r*π, "\n",area1+area2+area3-cell.r*cell.r*π)
 
         #nucleus.totalNucleusDose += dose
@@ -406,15 +406,12 @@ end
 
 #@everywhere function calculate_damage(ion::Ion, integral::Vector{Float64}, theta::Matrix{Float64}, Gyr::Float64)
 
-@everywhere function calculate_damage(ion_::Ion, cell_::Cell, integral_, theta_, Gyr_, radius_)
-
-    global X_CD = Array{Float64}(undef, 0, Nd);
-    global Y_CD = Array{Float64}(undef, 0, Nd);
+@everywhere function calculate_damage(ion_::Ion, cell_::Cell, integral_, theta_, Gyr_, radius_, x_, y_)
     
     #theta__ = [theta_[1:end-1]./2 theta_[2:end]./2]
     #theta_ = minimum(theta__, dims = 2)
     
-    global b = sqrt(x*x + y*y)
+    global b = sqrt(x_*x_ + y_*y_)
     
     global kappa_DSB = 9*calculate_kappa(ion_);
     global lambda_DSB = kappa_DSB*10^-3;
@@ -423,38 +420,48 @@ end
     global y0d = rand(Poisson(lambda_DSB*Gyr_))
     
     if (x0d == 0) & (y0d == 0)
+        global X_CD = Array{Float64}(undef, 0, Nd);
+        global Y_CD = Array{Float64}(undef, 0, Nd);
+
         return X_CD, Y_CD
     end
     
     if x0d > 0
+        #global X_CD = Array{Float64}(0., x0d, Nd);
+        global X_CD = zeros(x0d, Nd);
+
         global radius__xP = rand(Categorical((integral_/sum(integral_))), x0d)
         global radius__x = (radius_[radius__xP .+ 1] - radius_[radius__xP]).*rand(Uniform(0,1),x0d) .+ radius_[radius__xP];
         if (x >= 0)
-            global theta__x = 3*π/2 .- acos.(y/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+            global theta__x = 3*π/2 .- acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
         elseif (x < 0)
-            global theta__x = 3*π/2 .+ acos.(y/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+            global theta__x = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
         end
-        global Xx = radius__x.*cos.(theta__x) .+ x;
-        global Xy = radius__x.*sin.(theta__x) .+ y;
+        global Xx = radius__x.*cos.(theta__x) .+ x_;
+        global Xy = radius__x.*sin.(theta__x) .+ y_;
         for i in 1:x0d
-            global X_CD = vcat(X_CD,reshape([Xx[i], Xy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+            X_CD[i,:] = reshape([Xx[i], Xy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :);
         end
     else
         global X_CD = Array{Float64}(undef, 0, Nd);
     end
     
     if y0d > 0
+        #global Y_CD = Array{Float64}(undef, y0d, Nd);
+        global Y_CD = zeros(y0d, Nd);
+
         global radius__yP = rand(Categorical((integral_/sum(integral_))), y0d)
         global radius__y = (radius_[radius__yP .+ 1] - radius_[radius__yP]).*rand(Uniform(0,1),y0d) .+ radius_[radius__yP];
         if (x >= 0) 
-            global theta__y = 3*π/2 .- acos.(y/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
+            global theta__y = 3*π/2 .- acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
         elseif (x < 0) 
-            global theta__y = 3*π/2 .+ acos.(y/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
+            global theta__y = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
         end
-        global Yx = radius__y.*cos.(theta__y) .+ x;
-        global Yy = radius__y.*sin.(theta__y) .+ y;
+        global Yx = radius__y.*cos.(theta__y) .+ x_;
+        global Yy = radius__y.*sin.(theta__y) .+ y_;
         for i in 1:x0d
-            global Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+            #global Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+            Y_CD[i,:] = reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :);
         end
     else
         global Y_CD = Array{Float64}(undef, 0, Nd);
@@ -759,7 +766,7 @@ end
 		global track = Track(x, y, Rk_)
 		global integral, theta, Gyr, radius = distribute_dose_vector(ion_, cell_, track)
 
-		global X_i, Y_i = calculate_damage(ion_, cell_, integral, theta, Gyr, radius)
+		global X_i, Y_i = calculate_damage(ion_, cell_, integral, theta, Gyr, radius, x, y)
 
 		global dist = sqrt.(X_i[:, 1] .* X_i[:, 1] .+ X_i[:, 2] .* X_i[:, 2])
 		if size(dist[dist.>cell_.r], 1) != 0
@@ -776,5 +783,5 @@ end
 
 	global survP = spatial_GSM2_fast(X_, Y_, gsm2_)
 
-	return survP
+	return survP, X_, Y_
 end
