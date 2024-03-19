@@ -1,0 +1,7 @@
+.ipynb_checkpoints/
+Test_SIR.jl
+.DS_Store/
+.idea/
+.vscode/
+./Notebooks/
+./OLD/
