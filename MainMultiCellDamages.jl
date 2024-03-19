@@ -61,10 +61,7 @@ end
 include("utilities_multicell.jl")
 include("./FunctionsCreationCells.jl") 
 include("./FunctionsVisualisation.jl")
-#include("./FunctionsIntegralRadialDose.jl")
-# include("./FunctionsIntegralRadialDose_Vector.jl")
-# include("./FunctionsBeamsGeometry.jl")
-# include("./FunctionsCalculateDamagesPositions.jl")
+
 ###Parameters 
 ###Dimension of the hit box
 global X_box=250.;  #1000µmm side size of the square box
@@ -80,18 +77,14 @@ println(N)
 arrayOfCell=Creation_ArrayOfCell(N,nodes_positions,r_nucl,R_cell);
 #Plot_Lattice_Cells(arrayOfCell)
 ##########################################################
-
 global ion = Ion("4He", 56.0, 1, 4.5, 1.0)
-global irrad = Irrad(1.0, 0.8, 0.18)
-
+global irrad = Irrad(2.0, 0.8, 0.18)
 global (Rc, Rp, Rk) = ATRadius(ion, irrad)
 println("Rc=", Rc, "\nRp=", Rp, "\nRk=", Rk)
-global x_center,y_center,z_center=X_box/2.,X_box/2.,R_cell
-global targetCell=Cell(x_center,y_center,z_center,r_nucl,r_nucl)
-
-x, y = GenerateHit(targetCell, Rk)
-track = Track(x, y, Rk)
-
+#global x_center,y_center,z_center=X_box/2.,X_box/2.,R_cell
+#global targetCell=Cell(x_center,y_center,z_center,r_nucl,r_nucl)
+# x, y = GenerateHit(X_box)
+# track = Track(x, y, Rk)
 global DoseRate_h = irrad.doserate * 3600
 global F = irrad.dose / (1.602 * 10^(-9) * ion.LET)
 global Npar = round(Int, F * (pi * (R + Rk)^2 * 10^(-8)))
@@ -107,27 +100,51 @@ global T = irrad.dose / (zF * D) * 3600
 #Nd is the dimension fo the space, the nucleus of the cell is assumed to be a cylinder. Thde cell a sphere around the centerThe geometry can be more complicated but for now it is fine
 Nd = 3;
 @time begin
-    #Np=rand(Poisson(Npar))
-    Np=10;
+    Np = rand(Poisson(Npar))
+    #Np=10;
     #local DOSE_tot = 0. ;
     local GYR_tot  = 0. ;
     println(Np)
-    global X = Array{Float64}(undef, 0, Nd);
+	global X = Array{Float64}(undef, 0, Nd);
     global Y = Array{Float64}(undef, 0, Nd);
-    for i in 1:Np
-        x,y= GenerateHit(targetCell,Rk);
-        track=Track(x,y,Rk);
-        for j in 1:length(arrayOfCell)
+	println(X)
+	for i in 1:Np
+        local x,y = GenerateHit(X_box);
+        local track = Track(x,y,Rk);
+		#println(x," ",y)
+		#track=Track(30,30,Rk);
+        for j in 1:length(arrayOfCell) 
             cell=arrayOfCell[j];
-            println(cell)
-            integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
-            X_, Y_ = calculate_damage(ion ,cell, integral, theta, Gyr, radius);
-            X = vcat(X,X_)
-            Y = vcat(Y,Y_)
-            #DOSE_tot+=dose
+			local integral = Array{Float64}(undef,0)
+			local theta = Array{Float64}(undef,0)
+			local radius = Array{Float64}(undef,0)	
+			local Gyr=0
+            #println(cell)
+			if (cell.x-x)^2 +(cell.y-y)^2<(cell.r+Rk)^2
+            	local integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
+				#println(integral)
+            	local X_, Y_ = calculate_damage(ion,cell,track, integral, theta, Gyr, radius);
+				dist = sqrt.((X_[:, 1].-cell.x).^2 .+ (X_[:, 2] .-cell.y).^2)
+				if size(dist[dist.>cell.r], 1) != 0
+					println("Error")
+			#return X_i
+				end
+				#X_=hcat(X_,repeat([j],size(X_,1)))
+				#Y_=hcat(Y_,repeat([j],size(Y_,1)))
+				#print(size(X_),"\n",size(Y_))
+				X = vcat(X,X_)
+            	Y = vcat(Y,Y_)
+			end
+			#DOSE_tot+=dose
             GYR_tot+=Gyr
         end
     end
 # println(DOSE_tot)
 println(GYR_tot)
-end
+end 
+df = DataFrame(X,:auto)
+println(df) 
+plt = Plot_Lattice_Cells(arrayOfCell)
+Plots.scatter!(plt,df.x1,df.x2,df.x3,mode="markers",markersize=1)
+# plotlyjs()
+display(plt)

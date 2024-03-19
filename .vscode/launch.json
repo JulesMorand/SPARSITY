@@ -1,6 +1,14 @@
 {
   "version": "0.2.0",
   "configurations": [
+    
+    {
+      "type": "julia",
+      "request": "launch",
+      "name": "Launch Program",
+      "program": "${workspaceFolder}/Program",
+      "stopOnEntry": false
+    },
     {
       "name": "C/C++ Runner: Debug Session",
       "type": "cppdbg",

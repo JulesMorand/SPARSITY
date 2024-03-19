@@ -50,7 +50,7 @@ function Plot_Lattice_Cells(arrayOfCells)
         X, Y, Z, 
         opacity=0.4, 
         color=cgrad(:matter, N, categorical = true)[i], legend=false)
-        Xnc,Ync,Znc=CylinderShape(x,y,z,r,8.)
+        Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
         Plots.surface!(
         Xnc,Ync,Znc, 
         opacity=1, 
