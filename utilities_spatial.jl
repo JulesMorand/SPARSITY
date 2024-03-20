@@ -13,17 +13,19 @@
     return Rc, Rp, Rk
 
 end
-
+#Generate uniform Hit in a box from 0 to X_box in x and y
+@everywhere function GenerateHit_BOX(X_box::Float64)
+    x0 = rand(Uniform(0,1))*X_box;
+    y0 = rand(Uniform(0,1))*X_box;
+    return x0, y0
+end
+#Generate uniform Hit in a circle center in 0 0 from with radius cell.r+Rk
 @everywhere function GenerateHit(cell::Cell, Rk::Float64)
-
     radius = (cell.r+Rk)*sqrt((rand(Uniform(0,1))));
     theta = 2*pi*rand(Uniform(0,1));
-
     x0 = radius*cos(theta);
     y0 = radius*sin(theta);
-
     return x0, y0
-
 end
 #######################
 @everywhere function GetRadialLinearDose(r::Float64, ion::Ion)
@@ -212,11 +214,11 @@ end
 ##############
 
 @everywhere function integrate_weighted_radial_track_vector(ion::Ion, rMin::Float64, rMax::Float64, b::Float64, r_nucleus::Float64, nSteps::Int64)
-    r1, r2, log_r2, log_rMin, log_rMax, log_step = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-    f1, f2, f, arc_weight1, arc_weight2 = 0.0, 0.0, 0.0, 0.0, 0.0
-    integral = Array{Float64}(undef,0)
-    theta = Array{Float64}(undef,0)
-    radius = Array{Float64}(undef,0)
+    local r1, r2, log_r2, log_rMin, log_rMax, log_step = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    local f1, f2, f, arc_weight1, arc_weight2 = 0.0, 0.0, 0.0, 0.0, 0.0
+    local integral = Array{Float64}(undef,0)
+    local theta = Array{Float64}(undef,0)
+    local radius = Array{Float64}(undef,0)
     if rMin > 0
         log_rMin = log10(rMin)
     else
@@ -271,55 +273,55 @@ end
 #####################################
 
 @everywhere function distribute_dose_vector(ion::Ion, cell::Cell, track::Track)
-    global x_track, y_track = track.x,track.y
-    global x_track = (x_track - cell.x) #* 1e3  # mm -> um ??
-    global y_track = (y_track - cell.y) #* 1e3  # mm -> um
-    global b = sqrt(x_track^2 + y_track^2)
+    local x_track, y_track = track.x,track.y
+    local x_track = (x_track - cell.x) #* 1e3  # mm -> um ??
+    local y_track = (y_track - cell.y) #* 1e3  # mm -> um
+    local b = sqrt(x_track^2 + y_track^2)
 
-    global rMax = min(Rk, b + cell.r)
+    local rMax = min(Rk, b + cell.r)
 
-    global area1 = area2 = area3 = 0.0
+    local area1 = area2 = area3 = 0.0
 
     if b <= cell.r
         #nucleus.inNucleusCount += 1
-        global rMin = 0.0
+        local rMin = 0.0
 
         if b + track.Rk < cell.r
-            global r_intersection = track.Rk
+            local r_intersection = track.Rk
         else
-            global r_intersection = cell.r - b
+            local r_intersection = cell.r - b
         end
 
-        global area1 = π * r_intersection^2
-        global integral1, theta11, area1, radius1 = integrate_weighted_radial_track_vector(ion, 0., r_intersection, b, cell.r, 1000);
-        global dose = sum(integral1)
+        local area1 = π * r_intersection^2
+        local integral1, theta11, area1, radius1 = integrate_weighted_radial_track_vector(ion, 0., r_intersection, b, cell.r, 1000);
+        local dose = sum(integral1)
         # dose = track.getRadialIntegral(0.0, r_intersection) * area1
 
         if rMax > r_intersection
-            global integral2, theta21, area, radius2 = integrate_weighted_radial_track_vector(ion, r_intersection, rMax, b, cell.r,1000);
-            global area2 = area #track, r_intersection, rMax, b, 0.01
-            global dose += sum(integral2)
-            global integral = [integral1; integral2];
-            global theta = [theta11; theta21];
-            global radius = [radius1; radius2];
+            local integral2, theta21, area, radius2 = integrate_weighted_radial_track_vector(ion, r_intersection, rMax, b, cell.r,1000);
+            local area2 = area #track, r_intersection, rMax, b, 0.01
+            local dose += sum(integral2)
+            local integral = [integral1; integral2];
+            local theta = [theta11; theta21];
+            local radius = [radius1; radius2];
         else
-            global integral = integral1;
-            global theta = theta11;
-            global radius = radius1;
+            local integral = integral1;
+            local theta = theta11;
+            local radius = radius1;
         end
 
         if rMax == track.Rk
             if track.Rk > cell.r - b
-               global theta1 = acos((b/(2*rMax) + rMax/(2*b) - (cell.r^2) / (2 * b * rMax)))
-               global theta2 = acos((b/(2*cell.r) - (rMax*rMax)/(2*b*cell.r) + (cell.r) / (2 * b)))
-               global area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
+                local theta1 = acos((b/(2*rMax) + rMax/(2*b) - (cell.r^2) / (2 * b * rMax)))
+                local theta2 = acos((b/(2*cell.r) - (rMax*rMax)/(2*b*cell.r) + (cell.r) / (2 * b)))
+                local area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
             else
-                global area3 = π * (cell.r^2 - r_intersection^2)
+                local area3 = π * (cell.r^2 - r_intersection^2)
             end
         end
 
         #dose /= area1 + area2 + area3
-        global Gyr = dose/(area1+area2+ area3)
+        local Gyr = dose/(area1+area2+ area3)
        # println("area1: ",area1," area2: ",area2," area3: ",area3,"\n1 sumareas:",area1+area2+area3," aera cell:",cell.r*cell.r*π, "\n",area1+area2+area3-cell.r*cell.r*π)
 
         #nucleus.totalNucleusDose += dose
@@ -328,17 +330,17 @@ end
 
     elseif b <= cell.r + track.Rk
         #nucleus.intersectionCount += 1
-        global rMin = b - cell.r
-        global integral, theta, area, radius = integrate_weighted_radial_track_vector(ion, rMin, rMax, b, cell.r, 1000)
-        global dose = sum(integral)
-        global area2=area
+        local rMin = b - cell.r
+        local integral, theta, area, radius = integrate_weighted_radial_track_vector(ion, rMin, rMax, b, cell.r, 1000)
+        local dose = sum(integral)
+        local area2=area
         if rMax == track.Rk
-            global theta1 = acos((b/(2*rMax) + rMax/(2*b) - (cell.r^2) / (2 * b * rMax)))
-            global theta2 = acos((b/(2*cell.r) - (rMax*rMax)/(2*b*cell.r) + (cell.r) / (2 * b)))
-            global area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
+            local theta1 = acos((b/(2*rMax) + rMax/(2*b) - (cell.r^2) / (2 * b * rMax)))
+            local theta2 = acos((b/(2*cell.r) - (rMax*rMax)/(2*b*cell.r) + (cell.r) / (2 * b)))
+            local area3 = π * cell.r^2 - (theta1 * track.Rk^2 + theta2 * cell.r^2 - track.Rk * b * sin(theta1))
         end
 
-        global Gyr = dose/(area2 + area3)
+        local Gyr = dose/(area2 + area3)
 
         #nucleus.totalNucleusDose += dose
         #return dose, area1+area2+area3, Gyr
@@ -346,8 +348,8 @@ end
         #push!(nucleus.times, track.getTime())
     end
 
-    global integral[integral .< 0] .= 0
-    global theta = minimum([theta[1:end-1]./2 theta[2:end]./2], dims = 2)
+    local integral[integral .< 0] .= 0
+    local theta = minimum([theta[1:end-1]./2 theta[2:end]./2], dims = 2)
 
     return integral, theta, Gyr, radius
 end
@@ -410,61 +412,60 @@ end
     
     #theta__ = [theta_[1:end-1]./2 theta_[2:end]./2]
     #theta_ = minimum(theta__, dims = 2)
+    local b = sqrt(x_*x_ + y_*y_)
     
-    global b = sqrt(x_*x_ + y_*y_)
+    local kappa_DSB = 9*calculate_kappa(ion_);
+    local lambda_DSB = kappa_DSB*10^-3;
     
-    global kappa_DSB = 9*calculate_kappa(ion_);
-    global lambda_DSB = kappa_DSB*10^-3;
-    
-    global x0d = rand(Poisson(kappa_DSB*Gyr_))
-    global y0d = rand(Poisson(lambda_DSB*Gyr_))
+    local x0d = rand(Poisson(kappa_DSB*Gyr_))
+    local y0d = rand(Poisson(lambda_DSB*Gyr_))
     
     if (x0d == 0) & (y0d == 0)
-        global X_CD = Array{Float64}(undef, 0, Nd);
-        global Y_CD = Array{Float64}(undef, 0, Nd);
+        local X_CD = Array{Float64}(undef, 0, Nd);
+        local Y_CD = Array{Float64}(undef, 0, Nd);
 
         return X_CD, Y_CD
     end
     
     if x0d > 0
-        #global X_CD = Array{Float64}(0., x0d, Nd);
-        global X_CD = zeros(x0d, Nd);
+        local X_CD = Array{Float64}(undef, 0, Nd);
+        #local X_CD = zeros(x0d, Nd);
 
-        global radius__xP = rand(Categorical((integral_/sum(integral_))), x0d)
-        global radius__x = (radius_[radius__xP .+ 1] - radius_[radius__xP]).*rand(Uniform(0,1),x0d) .+ radius_[radius__xP];
-        if (x >= 0)
-            global theta__x = 3*π/2 .- acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
-        elseif (x < 0)
-            global theta__x = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+        local radius__xP = rand(Categorical((integral_/sum(integral_))), x0d)
+        local radius__x = (radius_[radius__xP .+ 1] - radius_[radius__xP]).*rand(Uniform(0,1),x0d) .+ radius_[radius__xP];
+        if (x_ >= 0)
+            local theta__x = 3*π/2 .- acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+        elseif (x_ < 0)
+            local theta__x = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
         end
-        global Xx = radius__x.*cos.(theta__x) .+ x_;
-        global Xy = radius__x.*sin.(theta__x) .+ y_;
+        local Xx = radius__x.*cos.(theta__x) .+ x_;
+        local Xy = radius__x.*sin.(theta__x) .+ y_;
         for i in 1:x0d
-            X_CD[i,:] = reshape([Xx[i], Xy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :);
+            X_CD = vcat(X_CD,reshape([Xx[i], Xy[i], cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     else
-        global X_CD = Array{Float64}(undef, 0, Nd);
+        local X_CD = Array{Float64}(undef, 0, Nd);
     end
     
     if y0d > 0
-        #global Y_CD = Array{Float64}(undef, y0d, Nd);
-        global Y_CD = zeros(y0d, Nd);
+        local Y_CD = Array{Float64}(undef, 0, Nd);
+        #local Y_CD = zeros(y0d, Nd);
 
-        global radius__yP = rand(Categorical((integral_/sum(integral_))), y0d)
-        global radius__y = (radius_[radius__yP .+ 1] - radius_[radius__yP]).*rand(Uniform(0,1),y0d) .+ radius_[radius__yP];
-        if (x >= 0) 
-            global theta__y = 3*π/2 .- acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
-        elseif (x < 0) 
-            global theta__y = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
+        local radius__yP = rand(Categorical((integral_/sum(integral_))), y0d)
+        local radius__y = (radius_[radius__yP .+ 1] - radius_[radius__yP]).*rand(Uniform(0,1),y0d) .+ radius_[radius__yP];
+        if (x_ >= 0) 
+            local theta__y = 3*π/2 .- acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
+        elseif (x_ < 0) 
+            local theta__y = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
         end
-        global Yx = radius__y.*cos.(theta__y) .+ x_;
-        global Yy = radius__y.*sin.(theta__y) .+ y_;
+        local Yx = radius__y.*cos.(theta__y) .+ x_;
+        local Yy = radius__y.*sin.(theta__y) .+ y_;
         for i in 1:x0d
             #global Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
-            Y_CD[i,:] = reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :);
+            Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     else
-        global Y_CD = Array{Float64}(undef, 0, Nd);
+        local Y_CD = Array{Float64}(undef, 0, Nd);
     end
     
     return X_CD, Y_CD
@@ -759,18 +760,17 @@ end
 end
 
 @everywhere function simulate_GSM2(ion_::Ion, cell_::Cell, gsm2_::GSM2, Np_::Int64, Rk_::Float64, GY_R_tot_::Float64, X_::Matrix{Float64}, Y_::Matrix{Float64})
-
 	for i in 1:Np_
 		#println("ii = $ii on thread $(Threads.threadid())")
-		global x, y = GenerateHit(cell_, Rk_)
-		global track = Track(x, y, Rk_)
-		global integral, theta, Gyr, radius = distribute_dose_vector(ion_, cell_, track)
+		local x, y = GenerateHit(cell_, Rk_)
+		local track = Track(x, y, Rk_)
+		local integral, theta, Gyr, radius = distribute_dose_vector(ion_, cell_, track)
 
-		global X_i, Y_i = calculate_damage(ion_, cell_, integral, theta, Gyr, radius, x, y)
+		local X_i, Y_i = calculate_damage(ion_, cell_, integral, theta, Gyr, radius, x, y)
 
-		global dist = sqrt.(X_i[:, 1] .* X_i[:, 1] .+ X_i[:, 2] .* X_i[:, 2])
+		local dist = sqrt.((X_i[:, 1]).^2 .+ (X_i[:, 2] ).^2)
 		if size(dist[dist.>cell_.r], 1) != 0
-			println("Error")
+			println("Error damage", X_i)
 			return X_i
 		end
 		X_ = vcat(X_, X_i)
@@ -780,7 +780,7 @@ end
 	end
 	#println("Total imparted dose = $GY_R_tot_")
 
-	global survP = spatial_GSM2_fast(X_, Y_, gsm2_)
+	local survP = spatial_GSM2_fast(X_, Y_, gsm2_)
 
 	return survP, X_, Y_
 end

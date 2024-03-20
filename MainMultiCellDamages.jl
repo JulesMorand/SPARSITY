@@ -58,7 +58,7 @@ begin
 		qa::Float64
 	end
 end
-include("utilities_multicell.jl")
+include("utilities_spatial.jl")
 include("./FunctionsCreationCells.jl") 
 include("./FunctionsVisualisation.jl")
 
@@ -109,7 +109,7 @@ Nd = 3;
     global Y = Array{Float64}(undef, 0, Nd);
 	println(X)
 	for i in 1:Np
-        local x,y = GenerateHit(X_box);
+        local x,y = GenerateHit_BOX(X_box);
         local track = Track(x,y,Rk);
 		#println(x," ",y)
 		#track=Track(30,30,Rk);
@@ -121,9 +121,9 @@ Nd = 3;
 			local Gyr=0
             #println(cell)
 			if (cell.x-x)^2 +(cell.y-y)^2<(cell.r+Rk)^2
-            	local integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
+            	integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
 				#println(integral)
-            	local X_, Y_ = calculate_damage(ion,cell,track, integral, theta, Gyr, radius);
+            	local X_, Y_ = calculate_damage(ion,cell, integral, theta, Gyr, radius,track.x,track.y);
 				dist = sqrt.((X_[:, 1].-cell.x).^2 .+ (X_[:, 2] .-cell.y).^2)
 				if size(dist[dist.>cell.r], 1) != 0
 					println("Error")
