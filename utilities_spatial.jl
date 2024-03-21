@@ -406,12 +406,74 @@ end
 #function to calculate the spatial position of the damages
 #for each track calculate the dose on the cell and ditribute the damages around the cell nucleus
 
-#@everywhere function calculate_damage(ion::Ion, integral::Vector{Float64}, theta::Matrix{Float64}, Gyr::Float64)
-
-@everywhere function calculate_damage(ion_::Ion, cell_::Cell, integral_, theta_, Gyr_, radius_, x_, y_)
+#####claculate damge OLD
+# @everywhere function calculate_damage(ion_::Ion, cell_::Cell, integral_, theta_, Gyr_, radius_, x_, y_)
     
-    #theta__ = [theta_[1:end-1]./2 theta_[2:end]./2]
-    #theta_ = minimum(theta__, dims = 2)
+#     #theta__ = [theta_[1:end-1]./2 theta_[2:end]./2]
+#     #theta_ = minimum(theta__, dims = 2)
+#     local b = sqrt((x_)^2 + (y_)^2)
+    
+#     local kappa_DSB = 9*calculate_kappa(ion_);
+#     local lambda_DSB = kappa_DSB*10^-3;
+    
+#     local x0d = rand(Poisson(kappa_DSB*Gyr_))
+#     local y0d = rand(Poisson(lambda_DSB*Gyr_))
+    
+#     if (x0d == 0) & (y0d == 0)
+#         local X_CD = Array{Float64}(undef, 0, Nd);
+#         local Y_CD = Array{Float64}(undef, 0, Nd);
+
+#         return X_CD, Y_CD
+#     end
+    
+#     if x0d > 0
+#         local X_CD = Array{Float64}(undef, 0, Nd);
+#         #local X_CD = zeros(x0d, Nd);
+
+#         local radius__xP = rand(Categorical((integral_/sum(integral_))), x0d)
+#         local radius__x = (radius_[radius__xP .+ 1] - radius_[radius__xP]).*rand(Uniform(0,1),x0d) .+ radius_[radius__xP];
+#         if (x_ >= 0)
+#             local theta__x = 3*π/2 .- acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+#         elseif (x_ < 0)
+#             local theta__x = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__xP].*rand(Uniform(0,1),x0d).*[-1 ,1][rand(Bernoulli(),x0d) .+ 1];
+#         end
+#         local Xx = radius__x.*cos.(theta__x) .+ x_;
+#         local Xy = radius__x.*sin.(theta__x) .+ y_;
+#         for i in 1:x0d
+#             X_CD = vcat(X_CD,reshape([Xx[i], Xy[i], cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+#         end
+#     else
+#         local X_CD = Array{Float64}(undef, 0, Nd);
+#     end
+    
+#     if y0d > 0
+#         local Y_CD = Array{Float64}(undef, 0, Nd);
+#         #local Y_CD = zeros(y0d, Nd);
+
+#         local radius__yP = rand(Categorical((integral_/sum(integral_))), y0d)
+#         local radius__y = (radius_[radius__yP .+ 1] - radius_[radius__yP]).*rand(Uniform(0,1),y0d) .+ radius_[radius__yP];
+#         if (x_ >= 0) 
+#             local theta__y = 3*π/2 .- acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];
+#         elseif (x_ < 0) 
+#             local theta__y = 3*π/2 .+ acos.(y_/b) .+ theta_[radius__yP].*rand(Uniform(0,1),y0d).*[-1 ,1][rand(Bernoulli(),y0d) .+ 1];  
+#         end
+#         local Yx = radius__y.*cos.(theta__y) .+ x_;
+#         local Yy = radius__y.*sin.(theta__y) .+ y_;
+#         for i in 1:x0d
+#             #global Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+#             Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+#         end
+#     else
+#         local Y_CD = Array{Float64}(undef, 0, Nd);
+#     end
+    
+#     return X_CD, Y_CD
+# end
+
+@everywhere function calculate_damage(ion_::Ion, cell_::Cell, track_::Track, integral_, theta_, Gyr_, radius_)
+    
+    local x_=track_.x - cell_.x;
+    local y_=track_.y - cell_.y;
     local b = sqrt((x_)^2 + (y_)^2)
     
     local kappa_DSB = 9*calculate_kappa(ion_);
@@ -441,7 +503,7 @@ end
         local Xx = radius__x.*cos.(theta__x) .+ x_;
         local Xy = radius__x.*sin.(theta__x) .+ y_;
         for i in 1:x0d
-            X_CD = vcat(X_CD,reshape([Xx[i], Xy[i], cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+            X_CD = vcat(X_CD,reshape([Xx[i]+cell_.x, Xy[i]+cell_.y, cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     else
         local X_CD = Array{Float64}(undef, 0, Nd);
@@ -462,7 +524,7 @@ end
         local Yy = radius__y.*sin.(theta__y) .+ y_;
         for i in 1:x0d
             #global Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
-            Y_CD = vcat(Y_CD,reshape([Yx[i], Yy[i], cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
+            Y_CD = vcat(Y_CD,reshape([Yx[i]+cell_.x, Yy[i]+cell_.y, cell_.R-cell_.r/2+cell_.r*rand(Uniform(0,1),1)[1]], 1, :));
         end
     else
         local Y_CD = Array{Float64}(undef, 0, Nd);
@@ -470,8 +532,6 @@ end
     
     return X_CD, Y_CD
 end
-
-#@everywhere function calculate_damage_NT(ion::Ion, integral::Float64, theta::Float64, Gyr::Float64, NT::Bool)
 
 @everywhere function calculate_damage_NT(ion::Ion, cell::Cell, integral, theta, Gyr, NT::Bool)
     
@@ -766,7 +826,7 @@ end
 		local track = Track(x, y, Rk_)
 		local integral, theta, Gyr, radius = distribute_dose_vector(ion_, cell_, track)
 
-		local X_i, Y_i = calculate_damage(ion_, cell_, integral, theta, Gyr, radius, x, y)
+		local X_i, Y_i = calculate_damage(ion_, cell_, track, integral, theta, Gyr, radius)
 
 		local dist = sqrt.((X_i[:, 1]).^2 .+ (X_i[:, 2] ).^2)
 		if size(dist[dist.>cell_.r], 1) != 0

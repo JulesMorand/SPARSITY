@@ -109,7 +109,7 @@ Nd = 3;
     println(Np)
 	@everywhere global X = Array{Float64}(undef, 0, Nd);
     @everywhere global Y = Array{Float64}(undef, 0, Nd);
-    @everywhere global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
+    #@everywhere global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
 	println(X)
 	for i in 1:Np
         local x, y = GenerateHit_BOX(X_box);
@@ -127,17 +127,17 @@ Nd = 3;
             #println(cell)
 			if (cell.x - x)^2 + (cell.y - y)^2 < (cell.r + Rk)^2
                                  
-                track_x_tr = track.x - cell.x;
-                track_y_tr = track.y - cell.y;
+               # track_x_tr = track.x - cell.x;
+                #track_y_tr = track.y - cell.y;
 
             	integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
 				#println(integral)
-            	local X_, Y_ = calculate_damage(ion, cell_origin, integral, theta, Gyr, radius, track_x_tr, track_y_tr);
+            	local X_, Y_ = calculate_damage(ion, cell, track, integral, theta, Gyr, radius);
 
-                X_[:, 1] .+= cell.x;
-                X_[:, 2] .+= cell.y;
-                Y_[:, 1] .+= cell.x;
-                Y_[:, 2] .+= cell.y;
+                # X_[:, 1] .+= cell.x;
+                # X_[:, 2] .+= cell.y;
+                # Y_[:, 1] .+= cell.x;
+                # Y_[:, 2] .+= cell.y;   
 
 				dist = sqrt.((X_[:, 1] .- cell.x).^2 .+ (X_[:, 2] .-cell.y).^2)
 				if size(dist[dist .> cell.r], 1) != 0
@@ -148,8 +148,8 @@ Nd = 3;
 				#X_=hcat(X_,repeat([j],size(X_,1)))
 				#Y_=hcat(Y_,repeat([j],size(Y_,1)))
 				#print(size(X_),"\n",size(Y_))
-				X = vcat(X,X_)
-            	Y = vcat(Y,Y_)
+				global X = vcat(X,X_)
+            	global Y = vcat(Y,Y_)
 			end
 			#DOSE_tot+=dose
             GYR_tot[j] += Gyr
