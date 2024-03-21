@@ -71,14 +71,14 @@ global R = r_nucleus = r_nucl= 8.0;; #8µm
 global R_cell=30.; #30µm
 #############CHOOSE squared or triangluar Lattice####
 #N,nodes_positions=generate_cells_positions_squaredlattice(X_box,R_cell)
-N,nodes_positions=generate_cells_positions_triangularlattice(X_box,R_cell) 
+N,nodes_positions = generate_cells_positions_triangularlattice(X_box,R_cell) 
 println(N)
 #############Create Cells Array######################
-arrayOfCell=Creation_ArrayOfCell(N,nodes_positions,r_nucl,R_cell);
+arrayOfCell = Creation_ArrayOfCell(N, nodes_positions, r_nucl, R_cell);
 #Plot_Lattice_Cells(arrayOfCell)
 ##########################################################
 global ion = Ion("4He", 56.0, 1, 4.5, 1.0)
-global irrad = Irrad(2.0, 0.8, 0.18)
+global irrad = Irrad(1.0, 0.8, 0.18)
 global (Rc, Rp, Rk) = ATRadius(ion, irrad)
 println("Rc=", Rc, "\nRp=", Rp, "\nRk=", Rk)
 #global x_center,y_center,z_center=X_box/2.,X_box/2.,R_cell
@@ -87,7 +87,9 @@ println("Rc=", Rc, "\nRp=", Rp, "\nRk=", Rk)
 # track = Track(x, y, Rk)
 global DoseRate_h = irrad.doserate * 3600
 global F = irrad.dose / (1.602 * 10^(-9) * ion.LET)
-global Npar = round(Int, F * (pi * (R + Rk)^2 * 10^(-8)))
+#global Npar = round(Int, F * (pi * (R + Rk)^2 * 10^(-8)))
+global Npar = round(Int, F * ((X_box^2) * 10^(-8)))
+
 # if no simulation of time
 #Np = round(Int, Dose/(1.602*10^(-9)*LET/(pi*(R+Rk)^2*10^(-8))));
 #Np = Npar;
@@ -103,30 +105,44 @@ Nd = 3;
     Np = rand(Poisson(Npar))
     #Np=10;
     #local DOSE_tot = 0. ;
-    local GYR_tot  = 0. ;
+    global GYR_tot = zeros(length(arrayOfCell));
     println(Np)
 	global X = Array{Float64}(undef, 0, Nd);
     global Y = Array{Float64}(undef, 0, Nd);
+    global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
 	println(X)
 	for i in 1:Np
-        local x,y = GenerateHit_BOX(X_box);
-        local track = Track(x,y,Rk);
+        local x, y = GenerateHit_BOX(X_box);
+        local track = Track(x, y, Rk);
 		#println(x," ",y)
 		#track=Track(30,30,Rk);
         for j in 1:length(arrayOfCell) 
-            cell=arrayOfCell[j];
+
+            cell = arrayOfCell[j];
+
 			local integral = Array{Float64}(undef,0)
 			local theta = Array{Float64}(undef,0)
 			local radius = Array{Float64}(undef,0)	
-			local Gyr=0
+			local Gyr = 0
             #println(cell)
-			if (cell.x-x)^2 +(cell.y-y)^2<(cell.r+Rk)^2
+			if (cell.x - x)^2 + (cell.y - y)^2 < (cell.r + Rk)^2
+                                 
+                track_x_tr = track.x - cell.x;
+                track_y_tr = track.y - cell.y;
+
             	integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
 				#println(integral)
-            	local X_, Y_ = calculate_damage(ion,cell, integral, theta, Gyr, radius,track.x,track.y);
-				dist = sqrt.((X_[:, 1].-cell.x).^2 .+ (X_[:, 2] .-cell.y).^2)
-				if size(dist[dist.>cell.r], 1) != 0
+            	local X_, Y_ = calculate_damage(ion, cell_origin, integral, theta, Gyr, radius, track_x_tr, track_y_tr);
+
+                X_[:, 1] .+= cell.x;
+                X_[:, 2] .+= cell.y;
+                Y_[:, 1] .+= cell.x;
+                Y_[:, 2] .+= cell.y;
+
+				dist = sqrt.((X_[:, 1] .- cell.x).^2 .+ (X_[:, 2] .-cell.y).^2)
+				if size(dist[dist .> cell.r], 1) != 0
 					println("Error")
+					println(j)
 			#return X_i
 				end
 				#X_=hcat(X_,repeat([j],size(X_,1)))
@@ -136,12 +152,13 @@ Nd = 3;
             	Y = vcat(Y,Y_)
 			end
 			#DOSE_tot+=dose
-            GYR_tot+=Gyr
+            GYR_tot[j] += Gyr
         end
     end
 # println(DOSE_tot)
 println(GYR_tot)
 end 
+
 df = DataFrame(X,:auto)
 println(df) 
 plt = Plot_Lattice_Cells(arrayOfCell)

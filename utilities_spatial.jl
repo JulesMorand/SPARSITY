@@ -412,7 +412,7 @@ end
     
     #theta__ = [theta_[1:end-1]./2 theta_[2:end]./2]
     #theta_ = minimum(theta__, dims = 2)
-    local b = sqrt(x_*x_ + y_*y_)
+    local b = sqrt((x_)^2 + (y_)^2)
     
     local kappa_DSB = 9*calculate_kappa(ion_);
     local lambda_DSB = kappa_DSB*10^-3;
