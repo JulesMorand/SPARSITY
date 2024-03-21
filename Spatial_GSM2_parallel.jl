@@ -117,12 +117,12 @@ global GYR_tot = 0.0;
 
 simulate_GSM2(ion, cell, gsm2, Np, Rk, GYR_tot, X, Y)
 
-global sim = 10;
+global sim = 100;
 #@everywhere survP = zeros(sim);
 @time begin
 	@everywhere global survP = Array{Float64}(undef, 0);
 	Threads.@threads for i_ in 1:sim
-		println("ii = $i_ on thread $(Threads.threadid())")
+		#println("ii = $i_ on thread $(Threads.threadid())")
 		local Np = rand(Poisson(Npar))
 		local GYR_tot = 0.0;
 
@@ -131,6 +131,7 @@ global sim = 10;
 
 		@everywhere survPi_, X_, Y_ = simulate_GSM2(ion, cell, gsm2, Np, Rk, GYR_tot, X, Y);
 
+		println(survPi_)
 		push!(survP, survPi_);
 		#print(X_)
 		#push!(Y,Y_)
