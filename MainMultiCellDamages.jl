@@ -105,11 +105,11 @@ Nd = 3;
     Np = rand(Poisson(Npar))
     #Np=10;
     #local DOSE_tot = 0. ;
-    global GYR_tot = zeros(length(arrayOfCell));
+    @everywhere global GYR_tot = zeros(length(arrayOfCell));
     println(Np)
-	global X = Array{Float64}(undef, 0, Nd);
-    global Y = Array{Float64}(undef, 0, Nd);
-    global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
+	@everywhere global X = Array{Float64}(undef, 0, Nd);
+    @everywhere global Y = Array{Float64}(undef, 0, Nd);
+    @everywhere global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
 	println(X)
 	for i in 1:Np
         local x, y = GenerateHit_BOX(X_box);
