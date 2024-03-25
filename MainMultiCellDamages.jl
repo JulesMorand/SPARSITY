@@ -6,14 +6,18 @@ using Random
 using Plots
 using Distances
 using WebIO,PlotlyJS
+#Nd is the dimension fo the space, the nucleus of the cell is assumed to be a cylinder. Thde cell a sphere around the centerThe geometry can be more complicated but for now it is fine
+Nd = 3;
 #initialize structures
 begin
-	struct Cell
+	mutable struct Cell
 		x::Float64
 		y::Float64
         z::Float64
-		r::Float64### r_nucleus
+		r::Float64### r_nucleus    
         R::Float64### R_cell
+		Dam_X::Array{Float64}
+		Dam_Y::Array{Float64}
 	end
 
 	struct Track
@@ -64,7 +68,7 @@ include("./FunctionsVisualisation.jl")
 
 ###Parameters 
 ###Dimension of the hit box
-global X_box=250.;  #1000µmm side size of the square box
+global X_box=500.;  #1000µmm side size of the square box
 ###Size Cell nucleus
 global R = r_nucleus = r_nucl= 8.0;; #8µm
 ###Size Cell
@@ -75,19 +79,21 @@ N,nodes_positions = generate_cells_positions_triangularlattice(X_box,R_cell)
 println(N)
 #############Create Cells Array######################
 arrayOfCell = Creation_ArrayOfCell(N, nodes_positions, r_nucl, R_cell);
-#Plot_Lattice_Cells(arrayOfCell)
 ##########################################################
 global ion = Ion("4He", 56.0, 1, 4.5, 1.0)
 global irrad = Irrad(1.0, 0.8, 0.18)
 global (Rc, Rp, Rk) = ATRadius(ion, irrad)
 println("Rc=", Rc, "\nRp=", Rp, "\nRk=", Rk)
-#global x_center,y_center,z_center=X_box/2.,X_box/2.,R_cell
-#global targetCell=Cell(x_center,y_center,z_center,r_nucl,r_nucl)
-# x, y = GenerateHit(X_box)
-# track = Track(x, y, Rk)
+
 global DoseRate_h = irrad.doserate * 3600
 global F = irrad.dose / (1.602 * 10^(-9) * ion.LET)
-#global Npar = round(Int, F * (pi * (R + Rk)^2 * 10^(-8)))
+#########################################
+
+global R_beam=100.; #Radius of the beam
+global x_cb,y_cb=125.,125.; #Coordiante of the center of the beam
+#### dose for circle beam
+#global Npar = round(Int, F * (pi * (R_beam)^2 * 10^(-8)))
+#### dose for squarte box
 global Npar = round(Int, F * ((X_box^2) * 10^(-8)))
 
 # if no simulation of time
@@ -99,21 +105,20 @@ global zF = irrad.dose / Npar
 global D = DoseRate_h / zF
 global T = irrad.dose / (zF * D) * 3600
 # ############Test function###
-#Nd is the dimension fo the space, the nucleus of the cell is assumed to be a cylinder. Thde cell a sphere around the centerThe geometry can be more complicated but for now it is fine
-Nd = 3;
-@time begin
+@time begin 
     Np = rand(Poisson(Npar))
     #Np=10;
     #local DOSE_tot = 0. ;
-    @everywhere global GYR_tot = zeros(length(arrayOfCell));
+    global GYR_tot = zeros(length(arrayOfCell));
     println(Np)
-	@everywhere global X = Array{Float64}(undef, 0, Nd);
-    @everywhere global Y = Array{Float64}(undef, 0, Nd);
+	global X = Array{Float64}(undef, 0, Nd);
+ 	global Y = Array{Float64}(undef, 0, Nd);
     #@everywhere global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
-	println(X)
-	for i in 1:Np
-        local x, y = GenerateHit_BOX(X_box);
-        local track = Track(x, y, Rk);
+	@time Threads.@threads for i in 1:Np
+		#println("ii = $i on thread $(Threads.threadid())")
+        #local x, y = GenerateHit_BOX(X_box);
+        local x, y = GenerateHit_Circle(x_cb,y_cb,R_beam )
+		local track = Track(x, y, Rk);
 		#println(x," ",y)
 		#track=Track(30,30,Rk);
         for j in 1:length(arrayOfCell) 
@@ -150,18 +155,24 @@ Nd = 3;
 				#print(size(X_),"\n",size(Y_))
 				global X = vcat(X,X_)
             	global Y = vcat(Y,Y_)
+				arrayOfCell[j].Dam_X=vcat(arrayOfCell[j].Dam_X,X_)
+				arrayOfCell[j].Dam_Y=vcat(arrayOfCell[j].Dam_Y,Y_)
 			end
 			#DOSE_tot+=dose
             GYR_tot[j] += Gyr
+			
+			# if length(Y_cell)!=0
+			# 	println(arrayOfCell[j].Dam_Y)
+			# end
         end
     end
 # println(DOSE_tot)
-println(GYR_tot)
+#println(GYR_tot)
 end 
 
-df = DataFrame(X,:auto)
-println(df) 
-plt = Plot_Lattice_Cells(arrayOfCell)
-Plots.scatter!(plt,df.x1,df.x2,df.x3,mode="markers",markersize=1)
-# plotlyjs()
+dfX = DataFrame(X,:auto)
+#println(dfX) 
+include("./FunctionsVisualisation.jl")
+plt = Plot_Lattice_Cells(arrayOfCell,X_box)
+
 display(plt)

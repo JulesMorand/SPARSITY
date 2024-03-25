@@ -20,6 +20,14 @@ end
     return x0, y0
 end
 #Generate uniform Hit in a circle center in 0 0 from with radius cell.r+Rk
+@everywhere function GenerateHit_Circle(x_::Float64,y_::Float64, R_beam::Float64)
+    radius = (R_beam)*sqrt((rand(Uniform(0,1))));
+    theta = 2*pi*rand(Uniform(0,1));
+    x0 = radius*cos(theta)+x_;
+    y0 = radius*sin(theta)+y_;
+    return x0, y0
+end
+#Generate uniform Hit in a circle center in 0 0 from with radius cell.r+Rk
 @everywhere function GenerateHit(cell::Cell, Rk::Float64)
     radius = (cell.r+Rk)*sqrt((rand(Uniform(0,1))));
     theta = 2*pi*rand(Uniform(0,1));

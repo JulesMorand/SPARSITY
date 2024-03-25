@@ -35,7 +35,7 @@ function Creation_ArrayOfCell(N::Int64, nodes_positions::Vector{Tuple{Float64, F
         for i in 1:N
             x,y=nodes_positions[i]
             ######z=R_cell for this layer of cell
-            cell=Cell(x,y,R__cell,r__nucl,R__cell)
+            cell=Cell(x,y,R__cell,r__nucl,R__cell,Array{Float64}(undef, 0, Nd),Array{Float64}(undef, 0, Nd))
             arrayOfCells[i]=cell
         end
     return arrayOfCells

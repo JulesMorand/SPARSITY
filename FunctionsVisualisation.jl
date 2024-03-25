@@ -8,6 +8,7 @@ function SphereShape(x,y,z,r)# (the cell)
    
     return X,Y,Z
 end
+
 function CylinderShape(x,y,z,r,h)# (the nucleus)
     r_cyl = r
     h_cyl  = h
@@ -23,40 +24,93 @@ function CylinderShape(x,y,z,r,h)# (the nucleus)
     return X,Y,Z
 end
 #############Plot the cell fro the arrayOfCells ############
-function Plot_Lattice_Cells(arrayOfCells)
+@everywhere function Plot_Lattice_Cells(arrayOfCells,X_box)
     plotlyjs()
     #Initialise the plot in ploting the first cell
-    local x,y,z,r,R=arrayOfCells[1].x,arrayOfCells[1].y,arrayOfCells[1].z,arrayOfCells[1].r,arrayOfCells[1].R
-    local X,Y,Z=SphereShape(x,y,z,R)
-    plt=Plots.surface(
-    X, Y, Z, 
-    size=(700,700),
-    opacity=0.4, 
-    color=cgrad(:matter, N, categorical = true)[1],
-    legend=false,
-    xlims=(0,X_box+R),
-    ylims=(0,X_box+R),
-    zlims=(0,X_box+R))
-    local Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
-    Plots.surface!(
-    Xnc,Ync,Znc, 
-    opacity=1, 
-    color=cgrad(:matter, N, categorical = true)[1], legend=false)
+    local x,y,z,r,R,Dam_X,Dam_Y=arrayOfCells[1].x,arrayOfCells[1].y,arrayOfCells[1].z,arrayOfCells[1].r,arrayOfCells[1].R,arrayOfCells[1].Dam_X,arrayOfCells[1].Dam_Y
+    local dfX = DataFrame(Dam_X,:auto)
+    local dfY = DataFrame(Dam_Y,:auto)
 
-    for i in 2:length(arrayOfCells)
-        local x,y,z,r,R=arrayOfCells[i].x,arrayOfCells[i].y,arrayOfCells[i].z,arrayOfCells[i].r,arrayOfCells[i].R
-        X,Y,Z=SphereShape(x,y,z,R)
-        Plots.surface!(
-        X, Y, Z, 
-        opacity=0.4, 
-        color=cgrad(:matter, N, categorical = true)[i], legend=false)
-        Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
+    #local X,Y,Z=SphereShape(x,y,z,R)
+    #println(length(Dam_Y)==0)
+    if length(Dam_Y)== 0
+        local X,Y,Z=SphereShape(x,y,z,R)
+        plt=Plots.surface(
+        X, Y, Z,
+        opacity=0.3,  
+        #color=cgrad(:matter, N, categorical = true)[i], 
+        color= :red,
+        legend=false)
+        local Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
         Plots.surface!(
         Xnc,Ync,Znc, 
-        opacity=1, 
-        color=cgrad(:matter, N, categorical = true)[i], legend=false)
-
+        opacity=0.9, 
+        #color=cgrad(:matter, N, categorical = true)[i], 
+        color= :red,
+        legend=false,
+        xlim = (0, X_box+30),
+        ylim = (0, X_box+30),
+        zlim = (0, X_box+30))
+    else
+        local X,Y,Z=SphereShape(x,y,z,R)
+        plt=Plots.surface(
+        X, Y, Z, 
+        opacity=0.3, 
+        #color=cgrad(:matter, N, categorical = true)[i], 
+        color= :black,
+        legend=false)
+        local Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
+        Plots.surface!(
+        Xnc,Ync,Znc, 
+        opacity=0.9, 
+        #color=cgrad(:matter, N, categorical = true)[i], 
+        color= :black,
+        legend=false,
+        xlim = (0, X_box+30),
+        ylim = (0, X_box+30),
+        zlim = (0, X_box+30))
     end
+    Plots.scatter!(plt,dfX.x1,dfX.x2,dfX.x3,mode="markers",markersize=0.5 , color= :purple ) 
+    Plots.scatter!(plt,dfY.x1,dfY.x2,dfY.x3,mode="markers",markersize=3 , color= :purple ) 
+    for i in 2:length(arrayOfCells)
+        local x,y,z,r,R,Dam_X,Dam_Y=arrayOfCells[i].x,arrayOfCells[i].y,arrayOfCells[i].z,arrayOfCells[i].r,arrayOfCells[i].R,arrayOfCells[i].Dam_X,arrayOfCells[i].Dam_Y
+        local dfX = DataFrame(Dam_X,:auto)
+        local dfY = DataFrame(Dam_Y,:auto)
+        if length(Dam_Y)==0
+            local X,Y,Z=SphereShape(x,y,z,R)
+            Plots.surface!(
+            X, Y, Z, 
+            opacity=0.3,  
+            #color=cgrad(:matter, N, categorical = true)[i], 
+            color= :red,
+            legend=false)
+            local Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
+            Plots.surface!(
+            Xnc,Ync,Znc, 
+            opacity=0.9, 
+            #color=cgrad(:matter, N, categorical = true)[i], 
+            color= :red,
+            legend=false)
+        else
+            local X,Y,Z=SphereShape(x,y,z,R)
+            Plots.surface!(
+            X, Y, Z, 
+            opacity=0.3, 
+            #color=cgrad(:matter, N, categorical = true)[i], 
+            color= :black,
+            legend=false)
+            local Xnc,Ync,Znc=CylinderShape(x,y,z,r,r)
+            Plots.surface!(
+            Xnc,Ync,Znc, 
+            opacity=0.9, 
+            #color=cgrad(:matter, N, categorical = true)[i], 
+            color= :black,
+            legend=false)
+        end
+        Plots.scatter!(plt,dfX.x1,dfX.x2,dfX.x3,mode="markers",markersize=0.5 , color= :green ) 
+        Plots.scatter!(plt,dfY.x1,dfY.x2,dfY.x3,mode="markers",markersize=3 , color= :purple ) 
+    end
+    plot!(size=(800,800))
     return plt
 end
  
