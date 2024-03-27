@@ -1,2 +1,4 @@
 # SPARSITY
-<img src="https://github.com/JulesMorand/SPARSITY/files/14776658/PlotDamages.pdf"/>
+<p align="center">
+  <img src="./PlotDamages.pdf" width="350" title="Ditribution radial damages">
+</p>
