@@ -1,2 +1,2 @@
 # SPARSITY
-<img src="https://github.com/JulesMorand/SPARSITY/blob/main/PlotDamages.pdf" width="300"/>
+<img src="https://github.com/JulesMorand/SPARSITY/blob/main/PlotDamages.png" width="300"/>
