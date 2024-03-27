@@ -1,2 +1,2 @@
 # SPARSITY
-<img src="./PlotDamages.pdf" width="300" />
+<img src="./PlotDamages.pdf" width="300" >
