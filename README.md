@@ -1,2 +1,2 @@
 # SPARSITY
-![Alt text](PlotDamages.pdf)
+<img src="PlotDamages.pdf" width="300" />
