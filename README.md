@@ -1,2 +1,2 @@
 # SPARSITY
-<img src="./PlotDamages.pdf" width="300" >
+[PlotDamages.pdf](https://github.com/JulesMorand/SPARSITY/files/14776658/PlotDamages.pdf)
