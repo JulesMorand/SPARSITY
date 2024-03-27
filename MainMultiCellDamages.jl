@@ -172,5 +172,6 @@ let
 			color= :yellow,
 			legend=false)
 	display(plt)
+	Plots.savefig(plt,"PlotDamages.pdf")
 end#dfX = DataFrame(TrackArray,:auto)
 #Plots.scatter!(plt,dfX.x1,dfX.x2,dfX.x3, mode="dots",markersize=0.5 , color= :yellow )
