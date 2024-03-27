@@ -1,2 +1,2 @@
 # SPARSITY
-![Alt Text]("PlotDamages.pdf")
+![Alt Text](https://github.com/JulesMorand/SPARSITY/edit/main/PlotDamages.pdf)
