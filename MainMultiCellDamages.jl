@@ -64,7 +64,7 @@ begin
 end
 include("utilities_spatial.jl")
 include("./FunctionsCreationCells.jl") 
-include("./FunctionsVisualisation.jl")
+#include("./FunctionsVisualisation.jl")
 
 ###Parameters 
 ###Dimension of the hit box
@@ -92,9 +92,9 @@ global F = irrad.dose / (1.602 * 10^(-9) * ion.LET)
 global R_beam=100.; #Radius of the beam
 global x_cb,y_cb=125.,125.; #Coordiante of the center of the beam
 #### dose for circle beam
-#global Npar = round(Int, F * (pi * (R_beam)^2 * 10^(-8)))
+global Npar = round(Int, F * (pi * (R_beam)^2 * 10^(-8)))
 #### dose for squarte box
-global Npar = round(Int, F * ((X_box^2) * 10^(-8)))
+#global Npar = round(Int, F * ((X_box^2) * 10^(-8)))
 
 # if no simulation of time
 #Np = round(Int, Dose/(1.602*10^(-9)*LET/(pi*(R+Rk)^2*10^(-8))));
@@ -113,12 +113,15 @@ global T = irrad.dose / (zF * D) * 3600
     println(Np)
 	global X = Array{Float64}(undef, 0, Nd);
  	global Y = Array{Float64}(undef, 0, Nd);
-    #@everywhere global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
+	#global TrackArray = Array{Float64}(undef, 0, Nd);
+
+	#@everywhere global cell_origin = Cell(0.0, 0.0, 0.0, r_nucleus, R_cell);
 	@time Threads.@threads for i in 1:Np
 		#println("ii = $i on thread $(Threads.threadid())")
         #local x, y = GenerateHit_BOX(X_box);
         local x, y = GenerateHit_Circle(x_cb,y_cb,R_beam )
 		local track = Track(x, y, Rk);
+		#global TrackArray=vcat(TrackArray,[x y 0.])
 		#println(x," ",y)
 		#track=Track(30,30,Rk);
         for j in 1:length(arrayOfCell) 
@@ -131,28 +134,16 @@ global T = irrad.dose / (zF * D) * 3600
 			local Gyr = 0
             #println(cell)
 			if (cell.x - x)^2 + (cell.y - y)^2 < (cell.r + Rk)^2
-                                 
-               # track_x_tr = track.x - cell.x;
-                #track_y_tr = track.y - cell.y;
-
+                
             	integral, theta, Gyr, radius= distribute_dose_vector(ion,cell,track);
 				#println(integral)
             	local X_, Y_ = calculate_damage(ion, cell, track, integral, theta, Gyr, radius);
-
-                # X_[:, 1] .+= cell.x;
-                # X_[:, 2] .+= cell.y;
-                # Y_[:, 1] .+= cell.x;
-                # Y_[:, 2] .+= cell.y;   
-
-				dist = sqrt.((X_[:, 1] .- cell.x).^2 .+ (X_[:, 2] .-cell.y).^2)
+                dist = sqrt.((X_[:, 1] .- cell.x).^2 .+ (X_[:, 2] .-cell.y).^2)
 				if size(dist[dist .> cell.r], 1) != 0
 					println("Error")
 					println(j)
 			#return X_i
 				end
-				#X_=hcat(X_,repeat([j],size(X_,1)))
-				#Y_=hcat(Y_,repeat([j],size(Y_,1)))
-				#print(size(X_),"\n",size(Y_))
 				global X = vcat(X,X_)
             	global Y = vcat(Y,Y_)
 				arrayOfCell[j].Dam_X=vcat(arrayOfCell[j].Dam_X,X_)
@@ -167,12 +158,19 @@ global T = irrad.dose / (zF * D) * 3600
         end
     end
 # println(DOSE_tot)
-#println(GYR_tot)
+println(GYR_tot)
 end 
-
-dfX = DataFrame(X,:auto)
-#println(dfX) 
-include("./FunctionsVisualisation.jl")
-plt = Plot_Lattice_Cells(arrayOfCell,X_box)
-
-display(plt)
+######Plots Damages###### 
+let
+	include("./FunctionsVisualisation.jl")
+	plt = Plot_Lattice_Cells(arrayOfCell,X_box)
+	Xnc,Ync,Znc=CylinderShape(x_cb,y_cb,0.,R_beam,R_beam);
+	Plots.surface!(plt,
+			Xnc,Ync,Znc, 
+			opacity=0.7, 
+			#color=cgrad(:matter, N, categorical = true)[i], 
+			color= :yellow,
+			legend=false)
+	display(plt)
+end#dfX = DataFrame(TrackArray,:auto)
+#Plots.scatter!(plt,dfX.x1,dfX.x2,dfX.x3, mode="dots",markersize=0.5 , color= :yellow )

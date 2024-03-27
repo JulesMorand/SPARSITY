@@ -1,5 +1,5 @@
 function SphereShape(x,y,z,r)# (the cell)
-    N = 50
+    N = 25#######Resolution
     u = range(0, stop=2π, length=N)
     v = range(0, stop=π, length=N)
     X = r.*cos.(u) .* sin.(v)'.+x
@@ -12,7 +12,7 @@ end
 function CylinderShape(x,y,z,r,h)# (the nucleus)
     r_cyl = r
     h_cyl  = h
-    m_cyl , n_cyl  =50, 50
+    m_cyl , n_cyl  =25, 25#####Resolution
     u  = range(0, 2pi, length=n_cyl )
     v = range(z-h_cyl/2.,z+h_cyl/2., length=m_cyl )
     us = ones(m_cyl).*transpose(u)
@@ -108,9 +108,8 @@ end
             legend=false)
         end
         Plots.scatter!(plt,dfX.x1,dfX.x2,dfX.x3,mode="markers",markersize=0.5 , color= :green ) 
-        Plots.scatter!(plt,dfY.x1,dfY.x2,dfY.x3,mode="markers",markersize=3 , color= :purple ) 
+        Plots.scatter!(plt,dfY.x1,dfY.x2,dfY.x3,mode="markers",markersize=3 , color= :black ) 
     end
-    plot!(size=(800,800))
     return plt
 end
  
