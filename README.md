@@ -1,2 +1,2 @@
-![start](https://github.com/JulesMorand/SPARSITY/blob/main/PlotDamages.pdf)
+<img url="https://github.com/JulesMorand/SPARSITY/blob/main/PlotDamages.pdf">
 # SPARSITY
